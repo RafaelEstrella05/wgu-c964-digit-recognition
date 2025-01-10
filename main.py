@@ -72,6 +72,12 @@ class Canvas(QWidget):
 
     def clearCanvas(self):
         self.image.fill(Qt.white)
+
+        # Clear the cropped and resized images
+        self.main_window.cropped_display.clear()
+        self.main_window.resized_display.clear()
+        self.main_window.predicted_label.setText("Prediction: ---")
+
         self.update()
 
     def exportToArray(self):
