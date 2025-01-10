@@ -1,13 +1,14 @@
+import sys
+import numpy as np
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
+from PySide6.QtGui import QPainter, QMouseEvent, QImage, QColor, QPixmap, QPen
+from PySide6.QtCore import Qt, QPoint
+
 import os  # Provides functions to interact with the operating system
 import tensorflow as tf  # TensorFlow library for building and training machine learning models
 from tensorflow.keras.models import load_model  # Function to load a pre-trained Keras model
 from tensorflow.keras.datasets import mnist  # MNIST dataset, a benchmark for digit recognition tasks
 from tensorflow.keras.utils import to_categorical  # Utility to convert labels to one-hot encoding
-import numpy as np  # Library for numerical computations
-from PySide6.QtWidgets import QApplication, QMainWindow, QGridLayout, QWidget, QPushButton, QLabel  # Qt Widgets for GUI
-from PySide6.QtGui import QPainter, QPen  # Qt GUI components for painting and drawing
-from PySide6.QtCore import Qt  # Qt core functionalities
-import sys  # Provides access to system-specific parameters and functions
 
 # File name for saving and loading the trained model
 model_file = "mnist_model.keras"
@@ -44,7 +45,6 @@ y_train =
  ...
 ]
 '''
-
 # Check if a saved model exists
 if os.path.exists(model_file):
     # Load the saved model if it exists
@@ -78,87 +78,195 @@ else:
 test_loss, test_accuracy = model.evaluate(x_test, y_test)
 print(f"Test accuracy: {test_accuracy:.2f}")
 
-# Define a custom widget to create a pixel grid for digit drawing
-class PixelGrid(QWidget):
-    def __init__(self):
+
+class Canvas(QWidget):
+    def __init__(self, main_window, width=400, height=400):
         super().__init__()
-        self.grid_size = 28  # Number of rows and columns in the grid
-        self.pixel_size = 20  # Size of each pixel in the grid (in pixels)
-        self.pixels = np.zeros((self.grid_size, self.grid_size), dtype=int)  # Initialize grid with zeros
-        self.setFixedSize(self.grid_size * self.pixel_size, self.grid_size * self.pixel_size)  # Set widget size
+        self.main_window = main_window
+        self.setFixedSize(width, height)
+        self.image = QImage(self.size(), QImage.Format_RGB32)
+        self.image.fill(Qt.white)
+        self.drawing = False
+        self.last_point = QPoint()
+        self.pen_thickness = 9  # Set brush size here
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self.drawing = True
+            self.last_point = event.position().toPoint()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self.drawing and event.buttons() == Qt.LeftButton:
+            painter = QPainter(self.image)
+            pen = QPen(QColor(0, 0, 0))
+            pen.setWidth(self.pen_thickness)
+            painter.setPen(pen)
+            painter.drawLine(self.last_point, event.position().toPoint())
+            self.last_point = event.position().toPoint()
+            self.update()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self.drawing = False
 
     def paintEvent(self, event):
-        painter = QPainter(self)  # Create a painter object for the widget
-        pen = QPen(Qt.black)  # Set pen color to black
-        pen.setWidth(1)  # Set pen width
-        painter.setPen(pen)
+        canvas_painter = QPainter(self)
+        canvas_painter.drawImage(0, 0, self.image)
 
-        # Loop through each cell in the grid and draw pixels
-        for x in range(self.grid_size):
-            for y in range(self.grid_size):
-                rect_x = x * self.pixel_size  # X-coordinate of the top-left corner of the cell
-                rect_y = y * self.pixel_size  # Y-coordinate of the top-left corner of the cell
-                if self.pixels[y, x] == 1:  # Check if the pixel is activated (black)
-                    painter.fillRect(rect_x, rect_y, self.pixel_size, self.pixel_size, Qt.black)  # Fill cell with black
-                painter.drawRect(rect_x, rect_y, self.pixel_size, self.pixel_size)  # Draw cell border
+    def clearCanvas(self):
+        self.image.fill(Qt.white)
+        self.update()
 
-    def mousePressEvent(self, event):
-        self.toggle_pixel(event)  # Toggle pixel on mouse press
+    def exportToArray(self):
+        width, height = self.image.width(), self.image.height()
+        pixel_array = np.zeros((height, width), dtype=np.uint8)
 
-    def mouseMoveEvent(self, event):
-        self.toggle_pixel(event)  # Toggle pixel on mouse move
+        for y in range(height):
+            for x in range(width):
+                color = self.image.pixelColor(x, y)
+                pixel_array[y, x] = 1 if color == QColor(0, 0, 0) else 0
 
-    def toggle_pixel(self, event):
-        pos = event.position()  # Get the position of the mouse event
-        x = int(pos.x() // self.pixel_size)  # Calculate grid column
-        y = int(pos.y() // self.pixel_size)  # Calculate grid row
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size:  # Check if coordinates are within grid bounds
-            self.pixels[y, x] = 1  # Activate the pixel (set to 1)
-            self.update()  # Redraw the widget
+        return pixel_array
 
-    def reset_grid(self):
-        self.pixels.fill(0)  # Reset all pixels to 0 (clear the grid)
-        self.update()  # Redraw the widget
+    def cropToBoundingBox(self, pixel_array):
+        rows = np.any(pixel_array, axis=1)
+        cols = np.any(pixel_array, axis=0)
+        y_min, y_max = np.where(rows)[0][[0, -1]]
+        x_min, x_max = np.where(cols)[0][[0, -1]]
 
-    def get_digit_array(self):
-        return self.pixels.astype('float32').reshape(1, 28, 28, 1)  # Reshape grid to match CNN input format
+        # Calculate proportional padding
+        height, width = pixel_array.shape
+        box_height = y_max - y_min + 1
+        box_width = x_max - x_min + 1
+        padding = max(2, int(0.15 * min(box_height, box_width)))
 
-# Define the main application window
+        # Determine the size of the square bounding box
+        box_size = max(box_height, box_width) + 2 * padding
+
+        # Add padding and make the box square
+        center_y = (y_min + y_max) // 2
+        center_x = (x_min + x_max) // 2
+        y_min = max(0, center_y - box_size // 2)
+        y_max = min(height - 1, center_y + box_size // 2)
+        x_min = max(0, center_x - box_size // 2)
+        x_max = min(width - 1, center_x + box_size // 2)
+
+        cropped_array = pixel_array[y_min:y_max + 1, x_min:x_max + 1]
+        return cropped_array
+
+    def resizeTo28x28(self, cropped_array):
+        target_size = (28, 28)
+        resized_array = np.zeros(target_size, dtype=np.uint8)
+
+        cropped_height, cropped_width = cropped_array.shape
+        for y in range(target_size[0]):
+            for x in range(target_size[1]):
+                # Map the 28x28 grid to the size of the cropped array
+                src_y = int(y * cropped_height / target_size[0])
+                src_x = int(x * cropped_width / target_size[1])
+                resized_array[y, x] = cropped_array[src_y, src_x]
+
+        return resized_array
+
+    def predict_digit(self, digit_array): #digit_array is numpy array
+        prediction = model.predict(digit_array)  # Use the CNN model to predict the digit
+        predicted_digit = np.argmax(prediction)  # Extract the digit with the highest probability
+        self.main_window.predicted_label.setText(f"Predicted Digit: {predicted_digit}")
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Digit Recognizer")  # Set window title
 
-        self.central_widget = QWidget()  # Create central widget
-        self.layout = QGridLayout()  # Use a grid layout
-        self.central_widget.setLayout(self.layout)  # Set the layout for the central widget
-        self.setCentralWidget(self.central_widget)  # Set the central widget for the window
+        self.setWindowTitle("WGU C964 - MNIST Digit Recognizer")
+        self.canvas = Canvas(self)
 
-        self.pixel_grid = PixelGrid()  # Create an instance of the PixelGrid widget
-        self.layout.addWidget(self.pixel_grid, 0, 0, 1, 2)  # Add the pixel grid to the layout
+        self.clear_button = QPushButton("Clear Canvas")
+        self.clear_button.clicked.connect(self.canvas.clearCanvas)
 
-        self.predict_button = QPushButton("Predict")  # Create a button for predictions
-        self.predict_button.clicked.connect(self.predict_digit)  # Connect button to prediction function
-        self.layout.addWidget(self.predict_button, 1, 0)  # Add button to the layout
+        self.export_button = QPushButton("Predict Digit")
+        self.export_button.clicked.connect(self.exportCropAndResizeCanvas)
 
-        self.reset_button = QPushButton("Reset")  # Create a button to reset the grid
-        self.reset_button.clicked.connect(self.pixel_grid.reset_grid)  # Connect button to grid reset function
-        self.layout.addWidget(self.reset_button, 1, 1)  # Add button to the layout
+        # Display the cropped and resized images
+        self.cropped_display = QLabel()
+        self.cropped_display.setFixedSize(200, 200)
+        self.cropped_display.setStyleSheet("border: 1px solid black;")
 
-        self.result_label = QLabel("Prediction: ")  # Create a label to display predictions
-        self.layout.addWidget(self.result_label, 2, 0, 1, 2)  # Add label to the layout
+        self.resized_display = QLabel()
+        self.resized_display.setFixedSize(200, 200)
+        self.resized_display.setStyleSheet("border: 1px solid black;")
 
-    def predict_digit(self):
-        digit_array = self.pixel_grid.get_digit_array()  # Get the user-drawn digit as a numpy array
-        prediction = model.predict(digit_array)  # Use the CNN model to predict the digit
-        predicted_digit = np.argmax(prediction)  # Extract the digit with the highest probability
-        self.result_label.setText(f"Prediction: {predicted_digit}")  # Display the predicted digit
+        self.predicted_label = QLabel("Predicted Digit: None")
+        self.predicted_label.setStyleSheet("font-size: 16px; font-weight: bold;")
 
-# Entry point of the application
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        layout.addWidget(self.clear_button)
+        layout.addWidget(self.export_button)
+        layout.addWidget(self.predicted_label)
+
+        display_layout = QHBoxLayout()
+        display_layout.addLayout(layout)
+        display_layout.addWidget(self.cropped_display)
+        display_layout.addWidget(self.resized_display)
+
+        container = QWidget()
+        container.setLayout(display_layout)
+        self.setCentralWidget(container)
+
+    def exportCropAndResizeCanvas(self):
+        pixel_array = self.canvas.exportToArray()
+        cropped_array = self.canvas.cropToBoundingBox(pixel_array)
+
+        # Convert the cropped array to a QImage for display
+        cropped_height, cropped_width = cropped_array.shape
+        cropped_image = QImage(cropped_width, cropped_height, QImage.Format_RGB32)
+        cropped_image.fill(Qt.white)
+
+        for y in range(cropped_height):
+            for x in range(cropped_width):
+                if cropped_array[y, x] == 1:
+                    cropped_image.setPixelColor(x, y, QColor(0, 0, 0))
+
+        cropped_pixmap = QPixmap.fromImage(cropped_image).scaled(
+            self.cropped_display.width(),
+            self.cropped_display.height(),
+            Qt.KeepAspectRatio
+        )
+        self.cropped_display.setPixmap(cropped_pixmap)
+
+        # Resize the cropped array to 28x28
+        resized_array = self.canvas.resizeTo28x28(cropped_array)
+
+        # Convert the resized array to a QImage for display
+        resized_image = QImage(28, 28, QImage.Format_RGB32)
+        resized_image.fill(Qt.white)
+
+        for y in range(28):
+            for x in range(28):
+                if resized_array[y, x] == 1:
+                    resized_image.setPixelColor(x, y, QColor(0, 0, 0))
+
+        resized_pixmap = QPixmap.fromImage(resized_image).scaled(
+            self.resized_display.width(),
+            self.resized_display.height(),
+            Qt.KeepAspectRatio
+        )
+        self.resized_display.setPixmap(resized_pixmap)
+
+        # Save resized array for prediction
+        self.resized_array = resized_array
+
+        # Predict the digit using the resized array, convert into numpy array
+        digit_array = resized_array.astype('float32').reshape(1, 28, 28, 1)
+        self.canvas.predict_digit(digit_array)
+
+        #click the clear button
+        self.canvas.clearCanvas()
+
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)  # Create the application object
-
-    window = MainWindow()  # Create the main application window
-    window.show()  # Show the main window
-
-    sys.exit(app.exec())  # Execute the application event loop
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
