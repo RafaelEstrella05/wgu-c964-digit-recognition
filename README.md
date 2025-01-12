@@ -10,4 +10,5 @@ This project is a digit recognition application that uses a convolutional neural
         numpy
         matplotlib
         PySide6
+        scipy
 

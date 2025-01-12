@@ -1,8 +1,9 @@
 import sys
 import numpy as np
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
 from PySide6.QtGui import QPainter, QMouseEvent, QImage, QColor, QPixmap, QPen
 from PySide6.QtCore import Qt, QPoint
+from scipy.ndimage import label
 
 import os
 import tensorflow as tf
@@ -145,7 +146,7 @@ class MainWindow(QMainWindow):
         self.clear_button.clicked.connect(self.canvas.clearCanvas)
 
         self.predict_button = QPushButton("Predict")
-        self.predict_button.clicked.connect(self.predict_digit)
+        self.predict_button.clicked.connect(self.validate_and_predict)
 
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.clear_button)
@@ -154,21 +155,21 @@ class MainWindow(QMainWindow):
         grid_layout = QHBoxLayout()
 
         left_grid_layout = QVBoxLayout()
-        #add title of the cropped image
+        # Add title of the cropped image
         title_cropped = QLabel("1) Crop, Center and Pad")
         title_cropped.setStyleSheet("font-size: 11px;")
         left_grid_layout.addWidget(title_cropped)
 
-        #add the cropped image
+        # Add the cropped image
         left_grid_layout.addWidget(self.cropped_display)
 
         right_grid_layout = QVBoxLayout()
-        #add title of the resized image
+        # Add title of the resized image
         title_resized = QLabel("2) Resize to 28x28")
         title_resized.setStyleSheet("font-size: 11px;")
         right_grid_layout.addWidget(title_resized)
 
-        #add the resized image
+        # Add the resized image
         right_grid_layout.addWidget(self.resized_display)
 
         grid_layout.addLayout(left_grid_layout)
@@ -189,8 +190,24 @@ class MainWindow(QMainWindow):
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
-    def predict_digit(self):
+    def validate_and_predict(self):
         pixel_array = self.canvas.exportToArray()
+
+        # Validate the input for multiple clumps
+        labeled_array, num_features = label(pixel_array)
+
+        if num_features > 1:
+            # Display a message to the user
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(f"Please draw only one digit at a time to ensure the CNN works accurately. \n use the clear button to clear the canvas")
+            msg_box.exec()
+            return
+
+        # Proceed with prediction if valid
+        self.predict_digit(pixel_array)
+
+    def predict_digit(self, pixel_array):
         cropped_array = self.canvas.cropToBoundingBox(pixel_array)
 
         cropped_height, cropped_width = cropped_array.shape
