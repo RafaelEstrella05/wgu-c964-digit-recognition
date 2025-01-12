@@ -12,3 +12,8 @@ This project is a digit recognition application that uses a convolutional neural
         PySide6
         scipy
 
+## Features
+    Security:
+    - checks for only 1 digit drawn
+    - disregards drawn clusters that are too small
+    - checks to make sure canvas is not empty

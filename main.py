@@ -196,11 +196,31 @@ class MainWindow(QMainWindow):
         # Validate the input for multiple clumps
         labeled_array, num_features = label(pixel_array)
 
-        if num_features > 1:
+        # Define a minimum pixel threshold to filter out small clusters
+        min_pixel_threshold = 500
+        valid_clusters = 0
+
+        for i in range(1, num_features + 1):
+            cluster_size = np.sum(labeled_array == i)
+            if cluster_size >= min_pixel_threshold:
+                valid_clusters += 1
+
+        #print the number of pixels in each cluster
+        print("Analyzing Pixel Clusters")
+        cluster_info = ", ".join([f"{i}) {np.sum(labeled_array == i)} pixels" for i in range(1, num_features + 1)])
+        print(cluster_info)
+
+        #erase all pixels that are not in the largest cluster
+        for i in range(1, num_features + 1):
+            cluster_size = np.sum(labeled_array == i)
+            if cluster_size < min_pixel_threshold:
+                pixel_array[labeled_array == i] = 0
+
+        if valid_clusters > 1:
             # Display a message to the user
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
-            msg_box.setText(f"Please draw only one digit at a time to ensure the CNN works accurately. \n use the clear button to clear the canvas")
+            msg_box.setText(f"Please draw only one digit at a time to ensure the CNN works accurately. \n Use the clear button to clear the canvas.")
             msg_box.exec()
             return
 
@@ -208,6 +228,18 @@ class MainWindow(QMainWindow):
         self.predict_digit(pixel_array)
 
     def predict_digit(self, pixel_array):
+
+        #if the pixel array is empty, return
+        if np.sum(pixel_array) == 0:
+
+            # Display a message to the user
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(f"Please draw a digit before predicting.")
+            msg_box.exec()
+
+            return
+
         cropped_array = self.canvas.cropToBoundingBox(pixel_array)
 
         cropped_height, cropped_width = cropped_array.shape
