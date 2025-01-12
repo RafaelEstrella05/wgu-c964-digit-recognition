@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="be5efbf8-c12d-4315-9f29-841db4d7a440" name="Changes" comment="reorganized gui components">
+    <list default="true" id="be5efbf8-c12d-4315-9f29-841db4d7a440" name="Changes" comment="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
@@ -148,7 +148,23 @@
       <option name="project" value="LOCAL" />
       <updated>1736483531057</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle.">
+      <option name="closed" value="true" />
+      <created>1736695400521</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1736695400521</updated>
+    </task>
+    <task id="LOCAL-00006" summary="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle.">
+      <option name="closed" value="true" />
+      <created>1736695411682</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1736695411682</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -167,6 +183,7 @@
     <MESSAGE value="added basic readme file" />
     <MESSAGE value="Working digit recognizer cnn with drawing canvas for on demand predictions" />
     <MESSAGE value="reorganized gui components" />
-    <option name="LAST_COMMIT_MESSAGE" value="reorganized gui components" />
+    <MESSAGE value="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle." />
+    <option name="LAST_COMMIT_MESSAGE" value="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle." />
   </component>
 </project>
