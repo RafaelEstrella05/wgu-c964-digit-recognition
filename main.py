@@ -4,6 +4,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, Q
 from PySide6.QtGui import QPainter, QMouseEvent, QImage, QColor, QPixmap, QPen
 from PySide6.QtCore import Qt, QPoint
 from scipy.ndimage import label
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 import os
 import tensorflow as tf
@@ -79,6 +81,8 @@ class Canvas(QWidget):
         self.main_window.resized_display.clear()
         self.main_window.predicted_label.setText("Prediction: ---")
 
+        self.main_window.update_bar_graph([0] * 10)
+
         self.update()
 
     def exportToArray(self):
@@ -148,6 +152,10 @@ class MainWindow(QMainWindow):
         self.predict_button = QPushButton("Predict")
         self.predict_button.clicked.connect(self.validate_and_predict)
 
+        self.figure, self.ax = plt.subplots()
+        self.bar_canvas = FigureCanvas(self.figure)
+        self.update_bar_graph([0] * 10)
+
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.clear_button)
         button_layout.addWidget(self.predict_button)
@@ -179,6 +187,7 @@ class MainWindow(QMainWindow):
         vbox_layout.addWidget(self.title_label)
         vbox_layout.addWidget(self.preprocess_label)
         vbox_layout.addLayout(grid_layout)
+        vbox_layout.addWidget(self.bar_canvas)
         vbox_layout.addWidget(self.predicted_label)
         vbox_layout.addLayout(button_layout)
 
@@ -189,6 +198,15 @@ class MainWindow(QMainWindow):
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
+
+    def update_bar_graph(self, probabilities):
+        self.ax.clear()
+        self.ax.bar(range(10), probabilities, color='blue')
+        self.ax.set_xticks(range(10))
+        self.ax.set_xlabel("Digits")
+        self.ax.set_ylabel("Probability")
+        self.ax.set_title("Class Probabilities")
+        self.bar_canvas.draw()
 
     def validate_and_predict(self):
         pixel_array = self.canvas.exportToArray()
@@ -228,16 +246,13 @@ class MainWindow(QMainWindow):
         self.predict_digit(pixel_array)
 
     def predict_digit(self, pixel_array):
-
-        #if the pixel array is empty, return
+        # If the pixel array is empty, return
         if np.sum(pixel_array) == 0:
-
             # Display a message to the user
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please draw a digit before predicting.")
             msg_box.exec()
-
             return
 
         cropped_array = self.canvas.cropToBoundingBox(pixel_array)
@@ -278,6 +293,16 @@ class MainWindow(QMainWindow):
         digit_array = resized_array.astype('float32').reshape(1, 28, 28, 1)
         prediction = model.predict(digit_array)
         predicted_digit = np.argmax(prediction)
+
+        # Update the bar graph with probabilities
+        self.update_bar_graph(prediction[0])
+
+        # Print probabilities for all classes
+        print("Class probabilities:")
+        for i, prob in enumerate(prediction[0]):
+            print(f"Class {i}: {prob:.4f}")
+
+        # Display the predicted class
         self.predicted_label.setText(f"Prediction: {predicted_digit}")
 
 if __name__ == "__main__":

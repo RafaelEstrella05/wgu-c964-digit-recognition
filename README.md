@@ -4,7 +4,7 @@ This project is a digit recognition application that uses a convolutional neural
 
 
 
-## Python Dependencies
+## Python 3.10.12 Dependencies
         tensorflow
         keras
         numpy
