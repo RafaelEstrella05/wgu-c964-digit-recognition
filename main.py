@@ -220,7 +220,9 @@ class MainWindow(QMainWindow):
         for i in range(10):
             button = QPushButton(str(i), msg_box)
             button.clicked.connect(lambda _, digit=i: (self.save_corrected_data(digit), msg_box.close()))
+            button.setStyleSheet("font-size: 18px; font-weight: bold;")
             msg_box.layout().addWidget(button)
+
 
         msg_box.exec()
 
