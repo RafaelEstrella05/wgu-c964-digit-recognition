@@ -99,6 +99,12 @@ class Canvas(QWidget):
     def cropToBoundingBox(self, pixel_array):
         rows = np.any(pixel_array, axis=1)
         cols = np.any(pixel_array, axis=0)
+
+        # Check if there are any non-zero pixels
+        if not rows.any() or not cols.any():
+            QMessageBox.warning(self.main_window, "No Drawing Detected", "Please draw a digit before marking it.")
+            return np.zeros((1, 1), dtype=np.uint8)  # Return a dummy array to avoid further errors
+
         y_min, y_max = np.where(rows)[0][[0, -1]]
         x_min, x_max = np.where(cols)[0][[0, -1]]
 
@@ -163,21 +169,19 @@ class MainWindow(QMainWindow):
         grid_layout = QHBoxLayout()
 
         left_grid_layout = QVBoxLayout()
-        # Add title of the cropped image
         title_cropped = QLabel("1) Crop, Center and Pad")
         title_cropped.setStyleSheet("font-size: 11px;")
         left_grid_layout.addWidget(title_cropped)
-
-        # Add the cropped image
         left_grid_layout.addWidget(self.cropped_display)
 
+        incorrect_button = QPushButton("Correction")
+        incorrect_button.clicked.connect(self.mark_incorrect)
+        left_grid_layout.addWidget(incorrect_button)
+
         right_grid_layout = QVBoxLayout()
-        # Add title of the resized image
         title_resized = QLabel("2) Resize to 28x28")
         title_resized.setStyleSheet("font-size: 11px;")
         right_grid_layout.addWidget(title_resized)
-
-        # Add the resized image
         right_grid_layout.addWidget(self.resized_display)
 
         grid_layout.addLayout(left_grid_layout)
@@ -199,6 +203,34 @@ class MainWindow(QMainWindow):
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
+    def mark_incorrect(self):
+        # Create a dialog for digit selection
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Mark Incorrect")
+        msg_box.setText("Select the correct digit:")
+        msg_box.setStandardButtons(QMessageBox.NoButton)  # No default buttons
+
+        # Create custom buttons for digits
+        for i in range(10):
+            button = QPushButton(str(i), msg_box)
+            button.clicked.connect(lambda _, digit=i: self.save_corrected_data(digit, msg_box))
+            msg_box.layout().addWidget(button)
+
+        msg_box.exec()
+
+    def save_corrected_data(self, correct_digit, msg_box):
+        # Process the corrected data and save it
+        resized_array = self.canvas.resizeTo28x28(self.canvas.cropToBoundingBox(self.canvas.exportToArray()))
+        normalized_image = resized_array.astype('float32') / 255.0
+
+        save_path = "user_corrected_data.csv"
+        with open(save_path, "a") as f:
+            flattened_data = [correct_digit] + normalized_image.flatten().tolist()
+            f.write(",".join(map(str, flattened_data)) + "\n")
+
+        self.canvas.clearCanvas()  # Clear the canvas after saving
+        msg_box.close()
+
     def update_bar_graph(self, probabilities):
         self.ax.clear()
         self.ax.bar(range(10), probabilities, color='blue')
@@ -211,10 +243,8 @@ class MainWindow(QMainWindow):
     def validate_and_predict(self):
         pixel_array = self.canvas.exportToArray()
 
-        # Validate the input for multiple clumps
         labeled_array, num_features = label(pixel_array)
 
-        # Define a minimum pixel threshold to filter out small clusters
         min_pixel_threshold = 500
         valid_clusters = 0
 
@@ -223,32 +253,26 @@ class MainWindow(QMainWindow):
             if cluster_size >= min_pixel_threshold:
                 valid_clusters += 1
 
-        #print the number of pixels in each cluster
         print("Analyzing Pixel Clusters")
         cluster_info = ", ".join([f"{i}) {np.sum(labeled_array == i)} pixels" for i in range(1, num_features + 1)])
         print(cluster_info)
 
-        #erase all pixels that are not in the largest cluster
         for i in range(1, num_features + 1):
             cluster_size = np.sum(labeled_array == i)
             if cluster_size < min_pixel_threshold:
                 pixel_array[labeled_array == i] = 0
 
         if valid_clusters > 1:
-            # Display a message to the user
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please draw only one digit at a time to ensure the CNN works accurately. \n Use the clear button to clear the canvas.")
             msg_box.exec()
             return
 
-        # Proceed with prediction if valid
         self.predict_digit(pixel_array)
 
     def predict_digit(self, pixel_array):
-        # If the pixel array is empty, return
         if np.sum(pixel_array) == 0:
-            # Display a message to the user
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please draw a digit before predicting.")
@@ -294,15 +318,12 @@ class MainWindow(QMainWindow):
         prediction = model.predict(digit_array)
         predicted_digit = np.argmax(prediction)
 
-        # Update the bar graph with probabilities
         self.update_bar_graph(prediction[0])
 
-        # Print probabilities for all classes
         print("Class probabilities:")
         for i, prob in enumerate(prediction[0]):
             print(f"Class {i}: {prob:.4f}")
 
-        # Display the predicted class
         self.predicted_label.setText(f"Prediction: {predicted_digit}")
 
 if __name__ == "__main__":
