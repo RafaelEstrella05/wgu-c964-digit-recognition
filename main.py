@@ -167,14 +167,8 @@ class MainWindow(QMainWindow):
         self.bar_canvas = FigureCanvas(self.figure)
         self.update_bar_graph([0] * 10)
 
-        incorrect_button = QPushButton("Correction")
-        incorrect_button.clicked.connect(self.mark_incorrect)
-        incorrect_button.setStyleSheet("font-size: 14px; padding: 10px;")
-
-
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.clear_button)
-        #button_layout.addWidget(incorrect_button) # UPDATE ME: Uncomment this line to add the correction button to the layout in the future
         button_layout.addWidget(self.predict_button)
 
         grid_layout = QHBoxLayout()
@@ -215,35 +209,7 @@ class MainWindow(QMainWindow):
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
-    def mark_incorrect(self):
-        # Create a dialog for digit selection
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Mark Incorrect")
-        msg_box.setText("Select the correct digit:")
-        msg_box.setStandardButtons(QMessageBox.Cancel)  # Set default button to Cancel
 
-        # Create custom buttons for digits
-        for i in range(10):
-            button = QPushButton(str(i), msg_box)
-            button.clicked.connect(lambda _, digit=i: (self.save_corrected_data(digit), msg_box.close()))
-            button.setStyleSheet("font-size: 18px; font-weight: bold;")
-            msg_box.layout().addWidget(button)
-
-
-        msg_box.exec()
-
-    def save_corrected_data(self, correct_digit):
-        # Process the corrected data and save it
-        resized_array = self.canvas.resizeTo28x28(self.canvas.cropToBoundingBox(self.canvas.exportToArray()))
-        normalized_image = resized_array.astype('float32') / 255.0
-
-        save_path = "user_corrected_data.csv"
-        with open(save_path, "a") as f:
-            flattened_data = [correct_digit] + normalized_image.flatten().tolist()
-            f.write(",".join(map(str, flattened_data)) + "\n")
-
-        self.canvas.clearCanvas()  # Clear the canvas after saving
-        #self.msg_box.close()
 
     def update_bar_graph(self, probabilities):
         self.ax.clear()
