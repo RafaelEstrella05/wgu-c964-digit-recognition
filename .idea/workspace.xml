@@ -4,13 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="be5efbf8-c12d-4315-9f29-841db4d7a440" name="Changes" comment="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle.">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/wgu-c964-digit-recognition.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/wgu-c964-digit-recognition.iml" afterDir="false" />
+    <list default="true" id="be5efbf8-c12d-4315-9f29-841db4d7a440" name="Changes" comment="fixed issue with pop up box not being able to close after a correction is made. styled buttons">
+      <change afterPath="$PROJECT_DIR$/visuals.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mnist_model.keras" beforeDir="false" afterPath="$PROJECT_DIR$/mnist_model.keras" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mnist_model.keras" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,20 +50,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.canvas.executor&quot;: &quot;Run&quot;,
-    &quot;Python.cnn.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.temp.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.canvas.executor": "Run",
+    "Python.cnn.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.temp.executor": "Run",
+    "Python.view.executor": "Run",
+    "Python.visuals.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/rafae/PycharmProjects/wgu-c964-digit-recognition",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\rafae\PycharmProjects\wgu-c964-digit-recognition" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="wgu-c964-digit-recognition" />
@@ -79,7 +86,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="SCRIPT_NAME" value="C:\Users\rafae\PycharmProjects\wgu-c964-digit-recognition\main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -153,7 +160,39 @@
       <option name="project" value="LOCAL" />
       <updated>1736695411682</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="added Correction button and functionality to gather a dataset to extend the mnist dataset for training">
+      <option name="closed" value="true" />
+      <created>1736969980306</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1736969980306</updated>
+    </task>
+    <task id="LOCAL-00008" summary="added instructions for pycharm setup">
+      <option name="closed" value="true" />
+      <created>1736970135745</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1736970135745</updated>
+    </task>
+    <task id="LOCAL-00009" summary="fixed issue with pop up box not being able to close after a correction is made.">
+      <option name="closed" value="true" />
+      <created>1736974641832</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1736974641832</updated>
+    </task>
+    <task id="LOCAL-00010" summary="fixed issue with pop up box not being able to close after a correction is made. styled buttons">
+      <option name="closed" value="true" />
+      <created>1736976341500</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1736976341500</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -173,6 +212,10 @@
     <MESSAGE value="Working digit recognizer cnn with drawing canvas for on demand predictions" />
     <MESSAGE value="reorganized gui components" />
     <MESSAGE value="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle." />
-    <option name="LAST_COMMIT_MESSAGE" value="added input validation for drawing. uses clustering to detect if the user has drawn more than one digit or doodle." />
+    <MESSAGE value="added Correction button and functionality to gather a dataset to extend the mnist dataset for training" />
+    <MESSAGE value="added instructions for pycharm setup" />
+    <MESSAGE value="fixed issue with pop up box not being able to close after a correction is made." />
+    <MESSAGE value="fixed issue with pop up box not being able to close after a correction is made. styled buttons" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed issue with pop up box not being able to close after a correction is made. styled buttons" />
   </component>
 </project>

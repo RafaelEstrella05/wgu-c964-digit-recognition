@@ -44,7 +44,9 @@ class Canvas(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        self.setFixedSize(400, 400)
+        #self.setFixedSize(400, 400)
+        #set min width and height
+        self.setMinimumSize(500, 500)
         self.image = QImage(self.size(), QImage.Format_RGB32)
         self.image.fill(Qt.white)
         self.drawing = False
@@ -136,8 +138,8 @@ class MainWindow(QMainWindow):
 
         self.canvas = Canvas(self)
 
-        self.title_label = QLabel("MNIST Digit Recognizer")
-        self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        #self.title_label = QLabel("MNIST Digit Recognizer")
+        #self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
 
         self.preprocess_label = QLabel("Preprocessing Steps")
         self.preprocess_label.setStyleSheet("font-size: 12px; font-weight: bold;")
@@ -172,7 +174,7 @@ class MainWindow(QMainWindow):
 
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.clear_button)
-        button_layout.addWidget(incorrect_button)
+        #button_layout.addWidget(incorrect_button) # UPDATE ME: Uncomment this line to add the correction button to the layout in the future
         button_layout.addWidget(self.predict_button)
 
         grid_layout = QHBoxLayout()
@@ -194,15 +196,19 @@ class MainWindow(QMainWindow):
         grid_layout.addLayout(right_grid_layout)
 
         vbox_layout = QVBoxLayout()
-        vbox_layout.addWidget(self.title_label)
+        #vbox_layout.addWidget(self.title_label)
         vbox_layout.addWidget(self.preprocess_label)
         vbox_layout.addLayout(grid_layout)
         vbox_layout.addWidget(self.bar_canvas)
         vbox_layout.addWidget(self.predicted_label)
-        vbox_layout.addLayout(button_layout)
+
+        left_vbox_layout = QVBoxLayout()
+
+        left_vbox_layout.addWidget(self.canvas)
+        left_vbox_layout.addLayout(button_layout)
 
         main_layout = QHBoxLayout()
-        main_layout.addWidget(self.canvas)
+        main_layout.addLayout(left_vbox_layout)
         main_layout.addLayout(vbox_layout)
 
         container = QWidget()
