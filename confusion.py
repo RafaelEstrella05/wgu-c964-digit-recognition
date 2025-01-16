@@ -19,7 +19,7 @@ def load_or_train_model():
     if os.path.exists(model_file):
         model = load_model(model_file)
     else:
-        raise FileNotFoundError(f"{model_file} not found. Train the model first.")
+        raise FileNotFoundError(f"{model_file} not found. Please train the model first by running main.py")
 
     return model, x_test, y_test
 
