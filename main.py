@@ -1,6 +1,7 @@
 import sys
 import numpy as np
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, \
+    QMessageBox, QListWidget
 from PySide6.QtGui import QPainter, QMouseEvent, QImage, QColor, QPixmap, QPen
 from PySide6.QtCore import Qt, QPoint
 from scipy.ndimage import label
@@ -13,32 +14,10 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
-# File name for saving and loading the trained model
-model_file = "mnist_model.keras"
-
-# Load the MNIST dataset and preprocess
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
-x_test = x_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0
-y_train = to_categorical(y_train, 10)
-y_test = to_categorical(y_test, 10)
-
-# Load or train model
-if os.path.exists(model_file):
-    model = load_model(model_file)
-else:
-    model = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(10, activation='softmax')
-    ])
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
-    model.save(model_file)
+#create global model variables
+global mode_name
+global model_list
+global model
 
 class Canvas(QWidget):
     def __init__(self, main_window):
@@ -132,6 +111,7 @@ class Canvas(QWidget):
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        global model_name
         super().__init__()
         self.msg_box = None
         self.setWindowTitle("MNIST Digit Recognizer")
@@ -198,8 +178,13 @@ class MainWindow(QMainWindow):
 
         left_vbox_layout = QVBoxLayout()
 
+        #create label for model name
+        model_label = QLabel("Model: " + model_name)
+
+
         left_vbox_layout.addWidget(self.canvas)
         left_vbox_layout.addLayout(button_layout)
+        left_vbox_layout.addWidget(model_label)
 
         main_layout = QHBoxLayout()
         main_layout.addLayout(left_vbox_layout)
@@ -252,6 +237,8 @@ class MainWindow(QMainWindow):
         self.predict_digit(pixel_array)
 
     def predict_digit(self, pixel_array):
+        global model
+
         if np.sum(pixel_array) == 0:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
@@ -306,8 +293,106 @@ class MainWindow(QMainWindow):
 
         self.predicted_label.setText(f"Prediction: {predicted_digit}")
 
+'''
+This window is in charge of reading the contents of the /models directory and displaying the available models in a list 
+for the user to select. The models are displayed in a dropdown list, in which the default option is to train a new model.
+the name of the new model will be "mnist_model_v_X.keras" where X is the next available number in the sequence.
+The "continue" button allows the user to continue with or without selecting a model.
+'''
+class ModelSelectionWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Model Selection")
+        self.setGeometry(100, 100, 800, 600)
+
+        self.model_list_label = QLabel("Select a model to use:")
+        self.model_list_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+
+        self.model_list_widget = QListWidget()
+        self.model_list_widget.setStyleSheet("font-size: 12px;")
+        self.model_list_widget.addItem("+ Train a new model")
+
+        for m in model_list:
+            self.model_list_widget.addItem(m)
+
+        self.continue_button = QPushButton("Continue")
+        self.continue_button.clicked.connect(self.continue_button_clicked)
+        self.continue_button.setStyleSheet("font-size: 14px; padding: 10px;")
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.model_list_label)
+        self.layout.addWidget(self.model_list_widget)
+        self.layout.addWidget(self.continue_button)
+
+        self.setLayout(self.layout)
+        self.show()
+        self.model_selection_window = self
+
+    def continue_button_clicked(self):
+        # Get the selected model
+        selected_model_name = self.model_list_widget.currentItem().text()
+        print(selected_model_name)
+
+        #verify that the extension is .keras
+        if selected_model_name[-6:] != ".keras":
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(f"Please select a keras model to continue.")
+            msg_box.exec()
+            return
+
+        load_or_train_model(selected_model_name)
+
+        self.model_selection_window.close()
+        main_window = MainWindow()
+        main_window.show()
+
+def load_or_train_model(model_file):
+    global model
+    global model_name
+
+    # Load MNIST dataset and preprocess
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+    y_train = to_categorical(y_train, 10)
+
+    if model_file == "+ Train a new model":
+        model_file = f"models/mnist_model_v_{len(model_list) + 1}.keras"
+
+        #extract the model name from the file path
+        model_name = model_file.split("/")[1]
+
+        model = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(10, activation='softmax')
+        ])
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
+        model.save(model_file)
+    else:
+        file_name = f"models/{model_file}"
+
+        # load the model from the models directory
+        model = load_model(file_name)
+
+        # remove the models/ prefix from the model name
+        model_name = model_file.split("/")[0]
+
 if __name__ == "__main__":
+    global model_list
+
     app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
+
+    # get list of models from /models directory
+    model_list = os.listdir("models")
+
+    model_selection_window = ModelSelectionWindow()
+
+
     sys.exit(app.exec())
