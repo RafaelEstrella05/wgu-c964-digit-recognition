@@ -334,8 +334,8 @@ class ModelSelectionWindow(QWidget):
         selected_model_name = self.model_list_widget.currentItem().text()
         print(selected_model_name)
 
-        #verify that the extension is .keras
-        if selected_model_name[-6:] != ".keras":
+        #verify that the extension is .keras and is not the default option
+        if selected_model_name != "+ Train a new model" and selected_model_name[-6:] != ".keras":
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please select a keras model to continue.")
@@ -374,6 +374,7 @@ def load_or_train_model(model_file):
         ])
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
+
         model.save(model_file)
     else:
         file_name = f"models/{model_file}"

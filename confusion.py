@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QPushButton, QVBoxLayout, QListWidget, QLabel, QWi
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
-import tensorflow as tf
+
 
 global model_list
 global model_name
@@ -18,7 +18,7 @@ global y_test
 def plot_confusion_matrix(confusion_matrix, classes):
     plt.figure(figsize=(8, 8))
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title("Confusion Matrix")
+    plt.title("Confusion Matrix: " + model_name)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
@@ -62,7 +62,6 @@ class ModelSelectionWindow(QWidget):
 
         self.model_list_widget = QListWidget()
         self.model_list_widget.setStyleSheet("font-size: 12px;")
-        self.model_list_widget.addItem("+ Train a new model")
 
         for m in model_list:
             self.model_list_widget.addItem(m)
@@ -93,12 +92,12 @@ class ModelSelectionWindow(QWidget):
             msg_box.exec()
             return
 
-        load_or_train_model(selected_model_name)
+        load_keras_model(selected_model_name)
 
         self.model_selection_window.close()
         main()
 
-def load_or_train_model(model_file):
+def load_keras_model(model_file):
     global model
     global model_name
     global x_test
@@ -112,32 +111,14 @@ def load_or_train_model(model_file):
     #y_test = to_categorical(y_test, 10)
     y_test = y_test
 
-    if model_file == "+ Train a new model":
-        model_file = f"models/mnist_model_v_{len(model_list) + 1}.keras"
 
-        #extract the model name from the file path
-        model_name = model_file.split("/")[1]
+    file_name = f"models/{model_file}"
 
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
-            tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-            tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(10, activation='softmax')
-        ])
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-        model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
-        model.save(model_file)
-    else:
-        file_name = f"models/{model_file}"
+    # load the model from the models directory
+    model = load_model(file_name)
 
-        # load the model from the models directory
-        model = load_model(file_name)
-
-        # remove the models/ prefix from the model name
-        model_name = model_file.split("/")[0]
+    # remove the models/ prefix from the model name
+    model_name = model_file.split("/")[0]
 
 def main():
     global model
@@ -160,10 +141,18 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    # get list of models from /models directory
-    model_list = os.listdir("models")
+    # get list of models from /models directory, exclude non-keras files
+    model_list = [f for f in os.listdir("models") if f.endswith(".keras")]
 
-    model_selection_window = ModelSelectionWindow()
+    # if model_list empty, alert user they have to train a new model by running main.py
+    if len(model_list) == 0:
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setText(f"No models found in the models directory. Please train a model first by running main.py")
+        msg_box.exec()
+        sys.exit()
+    else:
+        model_selection_window = ModelSelectionWindow()
 
 
     sys.exit(app.exec())
