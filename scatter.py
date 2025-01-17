@@ -8,6 +8,8 @@ from keras.src.utils import to_categorical
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 
+import tensorflow as tf
+
 global model
 global model_name
 global x_test
@@ -69,7 +71,6 @@ class ModelSelectionWindow(QWidget):
 
         self.model_list_widget = QListWidget()
         self.model_list_widget.setStyleSheet("font-size: 12px;")
-        self.model_list_widget.addItem("Select a model")
 
         for m in model_list:
             self.model_list_widget.addItem(m)
