@@ -14,18 +14,37 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
+import logging
+# Configure logging
+logging.basicConfig(
+    filename='main.log',
+    filemode='a',
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# Create a console handler so that logs are also displayed on the console
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(console_handler)
+
+
 #create global model variables
 global mode_name
 global model_list
 global model
 
+"""
+This class is in charge of creating the canvas where the user can draw the digit. It contains the mouse event handlers
+for drawing the digit, the paint event handler for rendering the drawn digit, and the clearCanvas function to clear the
+canvas.
+"""
 class Canvas(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        #self.setFixedSize(400, 400)
-        #set min width and height
-        self.setMinimumSize(500, 500)
+        self.setFixedSize(400, 400)
         self.image = QImage(self.size(), QImage.Format_RGB32)
         self.image.fill(Qt.white)
         self.drawing = False
@@ -66,6 +85,9 @@ class Canvas(QWidget):
 
         self.update()
 
+        logging.info("Canvas cleared")
+
+    #export the drawn digit to a numpy array
     def exportToArray(self):
         width, height = self.image.width(), self.image.height()
         pixel_array = np.zeros((height, width), dtype=np.uint8)
@@ -77,6 +99,16 @@ class Canvas(QWidget):
 
         return pixel_array
 
+    """
+        Crop the input pixel array to the bounding box of the digit. so that the digit is centered and padded.
+
+        Args:
+            pixel_array (np.ndarray): The input pixel array representing the drawn digit. 
+
+        Returns:
+            np.ndarray: The cropped pixel array containing the digit. 
+            size of the array is proportional to the size of the digit drawn in the canvas.
+        """
     def cropToBoundingBox(self, pixel_array):
         rows = np.any(pixel_array, axis=1)
         cols = np.any(pixel_array, axis=0)
@@ -86,16 +118,20 @@ class Canvas(QWidget):
             QMessageBox.warning(self.main_window, "No Drawing Detected", "Please draw a digit before marking it.")
             return np.zeros((1, 1), dtype=np.uint8)  # Return a dummy array to avoid further errors
 
+        # Get the bounding box of the digit
         y_min, y_max = np.where(rows)[0][[0, -1]]
         x_min, x_max = np.where(cols)[0][[0, -1]]
 
+        # Center the digit in the bounding box
         height, width = pixel_array.shape
         box_height = y_max - y_min + 1
         box_width = x_max - x_min + 1
-        padding = max(2, int(0.15 * min(box_height, box_width)))
+        padding = max(2, int(0.15 * min(box_height, box_width))) #add padding to the bounding box proportional to the size of the box(digit)
 
+        # Make the bounding box square
         box_size = max(box_height, box_width) + 2 * padding
 
+        # Calculate the new bounding box coordinates
         center_y = (y_min + y_max) // 2
         center_x = (x_min + x_max) // 2
         y_min = max(0, center_y - box_size // 2)
@@ -103,12 +139,28 @@ class Canvas(QWidget):
         x_min = max(0, center_x - box_size // 2)
         x_max = min(width - 1, center_x + box_size // 2)
 
+        # Crop the digit to the bounding box
         cropped_array = pixel_array[y_min:y_max + 1, x_min:x_max + 1]
         return cropped_array
 
+    """
+    Resize the input pixel array to 28x28 pixels using bilinear interpolation.
+    
+    Args:
+        cropped_array (np.ndarray): The input pixel array representing the cropped digit.
+
+    Returns:
+        np.ndarray: The resized pixel array containing the digit.
+        The size of the array is 28x28 pixels.    
+    """
     def resizeTo28x28(self, cropped_array):
         return np.array(tf.image.resize(cropped_array[..., np.newaxis], [28, 28]).numpy() > 0.5, dtype=np.uint8).squeeze()
 
+"""
+This class is in charge of creating the main window of the application. It contains the canvas where the user can draw
+the digit, the preprocessing steps, the prediction label, the clear and predict buttons, and the bar graph displaying
+the class probabilities.
+"""
 class MainWindow(QMainWindow):
     def __init__(self):
         global model_name
@@ -117,9 +169,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("MNIST Digit Recognizer")
 
         self.canvas = Canvas(self)
-
-        #self.title_label = QLabel("MNIST Digit Recognizer")
-        #self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
 
         self.preprocess_label = QLabel("Preprocessing Steps")
         self.preprocess_label.setStyleSheet("font-size: 12px; font-weight: bold;")
@@ -170,7 +219,6 @@ class MainWindow(QMainWindow):
         grid_layout.addLayout(right_grid_layout)
 
         vbox_layout = QVBoxLayout()
-        #vbox_layout.addWidget(self.title_label)
         vbox_layout.addWidget(self.preprocess_label)
         vbox_layout.addLayout(grid_layout)
         vbox_layout.addWidget(self.bar_canvas)
@@ -178,9 +226,7 @@ class MainWindow(QMainWindow):
 
         left_vbox_layout = QVBoxLayout()
 
-        #create label for model name
         model_label = QLabel("Model: " + model_name)
-
 
         left_vbox_layout.addWidget(self.canvas)
         left_vbox_layout.addLayout(button_layout)
@@ -205,6 +251,13 @@ class MainWindow(QMainWindow):
         self.ax.set_title("Class Probabilities")
         self.bar_canvas.draw()
 
+    """
+    This function is in charge of validating the input drawn by the user and predicting the digit using the CNN model.
+    
+    Returns:
+        None
+    
+    """
     def validate_and_predict(self):
         pixel_array = self.canvas.exportToArray()
 
@@ -213,21 +266,25 @@ class MainWindow(QMainWindow):
         min_pixel_threshold = 500
         valid_clusters = 0
 
+        #check if there are any valid clusters that meet the min pixel threshold
         for i in range(1, num_features + 1):
             cluster_size = np.sum(labeled_array == i)
             if cluster_size >= min_pixel_threshold:
                 valid_clusters += 1
 
-        print("Analyzing Pixel Clusters")
+        #extract the number of pixels in each cluster
         cluster_info = ", ".join([f"{i}) {np.sum(labeled_array == i)} pixels" for i in range(1, num_features + 1)])
-        print(cluster_info)
+        logging.info(f"Cluster info: {cluster_info}")
 
+        #remove clusters that do not meet the min pixel threshold
         for i in range(1, num_features + 1):
             cluster_size = np.sum(labeled_array == i)
             if cluster_size < min_pixel_threshold:
                 pixel_array[labeled_array == i] = 0
 
+        #check if there are multiple drawings (more than one separate cluster of pixels)
         if valid_clusters > 1:
+            logging.warning("Multiple drawings detected")
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please draw only one digit at a time to ensure the CNN works accurately. \n Use the clear button to clear the canvas.")
@@ -236,16 +293,29 @@ class MainWindow(QMainWindow):
 
         self.predict_digit(pixel_array)
 
+    """
+    This function is in charge of predicting the digit using the CNN model.
+    
+    Args:
+        pixel_array (np.ndarray): The input pixel array representing the drawn digit
+    
+    Returns:
+        None
+    
+    """
     def predict_digit(self, pixel_array):
         global model
 
+        #check if the pixel array is empty
         if np.sum(pixel_array) == 0:
+            logging.warning("No drawing detected")
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please draw a digit before predicting.")
             msg_box.exec()
             return
 
+        # Crop, center, and pad the digit
         cropped_array = self.canvas.cropToBoundingBox(pixel_array)
 
         cropped_height, cropped_width = cropped_array.shape
@@ -255,8 +325,9 @@ class MainWindow(QMainWindow):
         for y in range(cropped_height):
             for x in range(cropped_width):
                 if cropped_array[y, x] == 1:
-                    cropped_image.setPixelColor(x, y, QColor(0, 0, 0))
+                    cropped_image.setPixelColor(x, y, QColor(0, 0, 0)) #set the pixel color to black
 
+        #display the cropped image
         cropped_pixmap = QPixmap.fromImage(cropped_image).scaled(
             self.cropped_display.width(),
             self.cropped_display.height(),
@@ -264,16 +335,19 @@ class MainWindow(QMainWindow):
         )
         self.cropped_display.setPixmap(cropped_pixmap)
 
+        # Resize the digit to 28x28 pixels
         resized_array = self.canvas.resizeTo28x28(cropped_array)
 
         resized_image = QImage(28, 28, QImage.Format_RGB32)
         resized_image.fill(Qt.white)
 
+        #set the pixel colors to black
         for y in range(28):
             for x in range(28):
                 if resized_array[y, x] == 1:
                     resized_image.setPixelColor(x, y, QColor(0, 0, 0))
 
+        #display the resized image
         resized_pixmap = QPixmap.fromImage(resized_image).scaled(
             self.resized_display.width(),
             self.resized_display.height(),
@@ -281,15 +355,17 @@ class MainWindow(QMainWindow):
         )
         self.resized_display.setPixmap(resized_pixmap)
 
+        # Prepare the digit array for prediction
         digit_array = resized_array.astype('float32').reshape(1, 28, 28, 1)
+
+        # Predict the digit using the CNN model
         prediction = model.predict(digit_array)
         predicted_digit = np.argmax(prediction)
 
         self.update_bar_graph(prediction[0])
 
-        print("Class probabilities:")
-        for i, prob in enumerate(prediction[0]):
-            print(f"Class {i}: {prob:.4f}")
+        logging.info(f"Predicted digit: {predicted_digit}")
+        logging.info("Digit probabilities: " + ", ".join([f"{i}: {prob:.4f}" for i, prob in enumerate(prediction[0])]))
 
         self.predicted_label.setText(f"Prediction: {predicted_digit}")
 
@@ -329,13 +405,20 @@ class ModelSelectionWindow(QWidget):
         self.show()
         self.model_selection_window = self
 
+        logging.info("Rendering Model Selection Window")
+
+    """
+    This function is in charge of handling the continue button click event. It validates the selected model and loads it and closes the model selection window.
+    
+    """
     def continue_button_clicked(self):
         # Get the selected model
         selected_model_name = self.model_list_widget.currentItem().text()
-        print(selected_model_name)
+        logging.info(f"Selected Option: {selected_model_name}")
 
         #verify that the extension is .keras and is not the default option
         if selected_model_name != "+ Train a new model" and selected_model_name[-6:] != ".keras":
+            logging.warning("Invalid model file selected")
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(f"Please select a keras model to continue.")
@@ -348,6 +431,10 @@ class ModelSelectionWindow(QWidget):
         main_window = MainWindow()
         main_window.show()
 
+"""
+This function is in charge of loading the selected model or training a new model if the user selects the option to train a new model.
+
+"""
 def load_or_train_model(model_file):
     global model
     global model_name
@@ -358,10 +445,12 @@ def load_or_train_model(model_file):
     y_train = to_categorical(y_train, 10)
 
     if model_file == "+ Train a new model":
+
         model_file = f"models/mnist_model_v_{len(model_list) + 1}.keras"
 
         #extract the model name from the file path
         model_name = model_file.split("/")[1]
+        logging.info("Training new model: " + model_name)
 
         model = tf.keras.Sequential([
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
@@ -376,24 +465,35 @@ def load_or_train_model(model_file):
         model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
 
         model.save(model_file)
+        logging.info("Model sucessfully saved: " + model_file)
     else:
+
         file_name = f"models/{model_file}"
 
-        # load the model from the models directory
+        # load the model from the models directory using the tensorflow load_model function
         model = load_model(file_name)
 
         # remove the models/ prefix from the model name
         model_name = model_file.split("/")[0]
 
+
+
 if __name__ == "__main__":
     global model_list
 
-    app = QApplication(sys.argv)
+    try:
+        app = QApplication(sys.argv)
+        logging.info("Starting application")
 
-    # get list of models from /models directory
-    model_list = os.listdir("models")
+        # get list of models from /models directory
+        model_list = os.listdir("models")
 
-    model_selection_window = ModelSelectionWindow()
+        # log the models found in the directory
+        logging.info(f"Models found: {model_list}")
 
+        model_selection_window = ModelSelectionWindow()
 
-    sys.exit(app.exec())
+        sys.exit(app.exec())
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        sys.exit()
