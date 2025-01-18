@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, \
-    QMessageBox, QListWidget
+    QMessageBox, QListWidget, QComboBox
 from PySide6.QtGui import QPainter, QMouseEvent, QImage, QColor, QPixmap, QPen
 from PySide6.QtCore import Qt, QPoint
 from scipy.ndimage import label
@@ -34,6 +34,7 @@ logging.getLogger().addHandler(console_handler)
 global mode_name
 global model_list
 global model
+global model_accuracy
 
 """
 This class is in charge of creating the canvas where the user can draw the digit. It contains the mouse event handlers
@@ -200,6 +201,21 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.clear_button)
         button_layout.addWidget(self.predict_button)
 
+
+        #create confusion button
+        self.confusion_button = QPushButton("Confusion Matrix")
+        self.confusion_button.setStyleSheet("font-size: 14px; padding: 10px;")
+
+        #create scatter button
+        self.scatter_button = QPushButton("Scatter Plot")
+        self.scatter_button.setStyleSheet("font-size: 14px; padding: 10px;")
+
+
+        button_layout_2 = QHBoxLayout()
+        button_layout_2.addWidget(self.confusion_button)
+        button_layout_2.addWidget(self.scatter_button)
+
+
         grid_layout = QHBoxLayout()
 
         left_grid_layout = QVBoxLayout()
@@ -226,11 +242,31 @@ class MainWindow(QMainWindow):
 
         left_vbox_layout = QVBoxLayout()
 
-        model_label = QLabel("Model: " + model_name)
+        models_qcombo_box = QComboBox()
+        #add styling to the combo box
+        models_qcombo_box.setStyleSheet("font-size: 14px; padding: 10px;")
 
+
+        #load the current model into the combo box
+        models_qcombo_box.addItem(model_name + f" - Accuracy: {model_accuracy * 100:.2f}%")
+
+        #for each model in the model list, add it to the combo box
+        for m in model_list:
+            models_qcombo_box.addItem(m)
+
+
+        #onchange event for the combo box
+        models_qcombo_box.currentIndexChanged.connect(self.model_changed)
+
+        instruction_label = QLabel("Draw a digit in the canvas below")
+        instruction_label.setStyleSheet("font-size: 14px; height: 30px;")
+
+        left_vbox_layout.addWidget(models_qcombo_box)
+        left_vbox_layout.addLayout(button_layout_2)
+        left_vbox_layout.addWidget(instruction_label)
         left_vbox_layout.addWidget(self.canvas)
         left_vbox_layout.addLayout(button_layout)
-        left_vbox_layout.addWidget(model_label)
+
 
         main_layout = QHBoxLayout()
         main_layout.addLayout(left_vbox_layout)
@@ -240,6 +276,27 @@ class MainWindow(QMainWindow):
         container.setLayout(main_layout)
         self.setCentralWidget(container)
 
+        logging.info("Rendering Main Window")
+
+
+    def model_changed(self, i):
+        global model
+        global model_name
+        global model_accuracy
+
+        #if the index is 0, then the user has selected the current model
+        if i == 0:
+            return
+
+        #load the selected model from the model list
+        selected_model_name = model_list[i - 1]
+        load_or_train_model(selected_model_name)
+
+        #reload main window
+        self.close()
+        main_window = MainWindow()
+        main_window.show()
+
 
 
     def update_bar_graph(self, probabilities):
@@ -248,7 +305,7 @@ class MainWindow(QMainWindow):
         self.ax.set_xticks(range(10))
         self.ax.set_xlabel("Digits")
         self.ax.set_ylabel("Probability")
-        self.ax.set_title("Class Probabilities")
+        self.ax.set_title("Digit Probabilities")
         self.bar_canvas.draw()
 
     """
@@ -259,6 +316,7 @@ class MainWindow(QMainWindow):
     
     """
     def validate_and_predict(self):
+        logging.info("Validating and predicting digit")
         pixel_array = self.canvas.exportToArray()
 
         labeled_array, num_features = label(pixel_array)
@@ -274,7 +332,7 @@ class MainWindow(QMainWindow):
 
         #extract the number of pixels in each cluster
         cluster_info = ", ".join([f"{i}) {np.sum(labeled_array == i)} pixels" for i in range(1, num_features + 1)])
-        logging.info(f"Cluster info: {cluster_info}")
+        logging.info(f"Pixel cluster sizes: {cluster_info}")
 
         #remove clusters that do not meet the min pixel threshold
         for i in range(1, num_features + 1):
@@ -438,6 +496,7 @@ This function is in charge of loading the selected model or training a new model
 def load_or_train_model(model_file):
     global model
     global model_name
+    global model_accuracy
 
     # Load MNIST dataset and preprocess
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -465,7 +524,7 @@ def load_or_train_model(model_file):
         model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
 
         model.save(model_file)
-        logging.info("Model sucessfully saved: " + model_file)
+        logging.info("Model sucessfully saved and loaded: " + model_file)
     else:
 
         file_name = f"models/{model_file}"
@@ -476,7 +535,12 @@ def load_or_train_model(model_file):
         # remove the models/ prefix from the model name
         model_name = model_file.split("/")[0]
 
+        logging.info("Model sucessfully loaded: " + model_name)
 
+        # Evaluate the model on the test data
+        loss, accuracy = model.evaluate(x_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0, to_categorical(y_test, 10))
+        model_accuracy = accuracy
+        logging.info(f"Model accuracy: {accuracy:.4f}")
 
 if __name__ == "__main__":
     global model_list
