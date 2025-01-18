@@ -15,6 +15,8 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
 import logging
+
+
 # Configure logging
 logging.basicConfig(
     filename='main.log',
@@ -35,6 +37,8 @@ global mode_name
 global model_list
 global model
 global model_accuracy
+global x_test_data
+global y_test_data
 
 """
 This class is in charge of creating the canvas where the user can draw the digit. It contains the mouse event handlers
@@ -205,10 +209,12 @@ class MainWindow(QMainWindow):
         #create confusion button
         self.confusion_button = QPushButton("Confusion Matrix")
         self.confusion_button.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.confusion_button.clicked.connect(self.show_confusion_matrix)
 
         #create scatter button
         self.scatter_button = QPushButton("Scatter Plot")
         self.scatter_button.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.scatter_button.clicked.connect(self.show_scatter_plot)
 
 
         button_layout_2 = QHBoxLayout()
@@ -230,6 +236,8 @@ class MainWindow(QMainWindow):
         title_resized.setStyleSheet("font-size: 11px;")
         right_grid_layout.addWidget(title_resized)
         right_grid_layout.addWidget(self.resized_display)
+
+        self.right_grid_layout = right_grid_layout
 
         grid_layout.addLayout(left_grid_layout)
         grid_layout.addLayout(right_grid_layout)
@@ -258,7 +266,7 @@ class MainWindow(QMainWindow):
         #onchange event for the combo box
         models_qcombo_box.currentIndexChanged.connect(self.model_changed)
 
-        instruction_label = QLabel("Draw a digit in the canvas below")
+        instruction_label = QLabel("Draw a digit on the white canvas below")
         instruction_label.setStyleSheet("font-size: 14px; height: 30px;")
 
         left_vbox_layout.addWidget(models_qcombo_box)
@@ -277,6 +285,27 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         logging.info("Rendering Main Window")
+
+
+
+    def show_confusion_matrix(self):
+
+        predictions = model.predict(x_test_data)
+        y_pred = np.argmax(predictions, axis=1)
+
+        # Compute confusion matrix
+        confusion_matrix = compute_confusion_matrix(y_test_data, y_pred, num_classes=10)
+
+        print(confusion_matrix)
+
+        # Plot confusion matrix
+        plot_confusion_matrix(confusion_matrix, classes=[str(i) for i in range(10)])
+
+    def show_scatter_plot(self):
+        embeddings = extract_embeddings(x_test_data)
+        reduced_embeddings = reduce_dimensions(embeddings)
+        plot_embeddings(reduced_embeddings, y_test_data)
+
 
 
     def model_changed(self, i):
@@ -427,6 +456,8 @@ class MainWindow(QMainWindow):
 
         self.predicted_label.setText(f"Prediction: {predicted_digit}")
 
+
+
 '''
 This window is in charge of reading the contents of the /models directory and displaying the available models in a list 
 for the user to select. The models are displayed in a dropdown list, in which the default option is to train a new model.
@@ -497,11 +528,16 @@ def load_or_train_model(model_file):
     global model
     global model_name
     global model_accuracy
+    global x_test_data
+    global y_test_data
 
     # Load MNIST dataset and preprocess
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
     y_train = to_categorical(y_train, 10)
+
+    x_test_data = x_test
+    y_test_data = y_test
 
     if model_file == "+ Train a new model":
 
@@ -541,6 +577,81 @@ def load_or_train_model(model_file):
         loss, accuracy = model.evaluate(x_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0, to_categorical(y_test, 10))
         model_accuracy = accuracy
         logging.info(f"Model accuracy: {accuracy:.4f}")
+
+def compute_confusion_matrix(y_true, y_pred, num_classes):
+    confusion_matrix = np.zeros((num_classes, num_classes), dtype=int)
+
+    for true_label, predicted_label in zip(y_true, y_pred):
+        confusion_matrix[true_label, predicted_label] += 1
+
+    return confusion_matrix
+
+def plot_confusion_matrix(confusion_matrix, classes):
+
+    # clear the current plot
+    plt.clf()
+    plt.close()
+
+
+    plt.figure(figsize=(8, 8))
+    plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix: " + model_name)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    # Display the values in the confusion matrix
+    for i in range(len(classes)):
+        for j in range(len(classes)):
+            plt.text(j, i, format(confusion_matrix[i, j], 'd'),
+                     horizontalalignment="center",
+                     color="white" if confusion_matrix[i, j] > confusion_matrix.max() / 2. else "black")
+
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
+    plt.tight_layout()
+    plt.show()
+
+def extract_embeddings(x_data):
+    global model
+
+    # Use the penultimate layer's output as embeddings
+    embedding_model = tf.keras.models.Model(
+        inputs=model.inputs,
+        outputs=model.layers[-2].output
+    )
+
+    embeddings = embedding_model.predict(x_data)
+    return embeddings
+
+def reduce_dimensions(embeddings, num_dimensions=2):
+    # Simple PCA for dimensionality reduction
+    mean = np.mean(embeddings, axis=0)
+    embeddings_centered = embeddings - mean
+    covariance_matrix = np.cov(embeddings_centered, rowvar=False)
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
+    sorted_indices = np.argsort(eigenvalues)[::-1]
+    top_eigenvectors = eigenvectors[:, sorted_indices[:num_dimensions]]
+    reduced_embeddings = np.dot(embeddings_centered, top_eigenvectors)
+    return reduced_embeddings
+
+def plot_embeddings(embeddings, labels):
+    # clear the current plot
+    plt.clf()
+    plt.close()
+
+    plt.figure(figsize=(10, 10))
+
+    # Plot embeddings with colors corresponding to labels
+    scatter = plt.scatter(embeddings[:, 0], embeddings[:, 1], c=labels, cmap='tab10', s=10, alpha=0.7)
+    plt.colorbar(scatter, ticks=range(10), label='Classes')
+
+    plt.title("Scatterplot of Embeddings: " + model_name)
+    plt.xlabel("Embedding Dimension 1")
+    plt.ylabel("Embedding Dimension 2")
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     global model_list
