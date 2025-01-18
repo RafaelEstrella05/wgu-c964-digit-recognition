@@ -329,6 +329,10 @@ class MainWindow(QMainWindow):
 
 
     def update_bar_graph(self, probabilities):
+        # Clear the existing figure and axes
+        self.figure.clear()
+        self.ax = self.figure.add_subplot(111)
+
         self.ax.clear()
         self.ax.bar(range(10), probabilities, color='blue')
         self.ax.set_xticks(range(10))
@@ -468,15 +472,17 @@ class ModelSelectionWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Model Selection")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle("CNN Model Selection")
+        self.setGeometry(100, 100, 400, 400)
 
-        self.model_list_label = QLabel("Select a model to use:")
+        self.model_list_label = QLabel("Select a saved model or train a new one:")
         self.model_list_label.setStyleSheet("font-size: 14px; font-weight: bold;")
 
         self.model_list_widget = QListWidget()
         self.model_list_widget.setStyleSheet("font-size: 12px;")
         self.model_list_widget.addItem("+ Train a new model")
+
+        self.model_list_widget.setStyleSheet("font-size: 14px; padding: 2px;")
 
         for m in model_list:
             self.model_list_widget.addItem(m)
@@ -560,7 +566,7 @@ def load_or_train_model(model_file):
         model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
 
         model.save(model_file)
-        logging.info("Model sucessfully saved and loaded: " + model_file)
+        logging.info("Model successfully saved and loaded: " + model_file)
     else:
 
         file_name = f"models/{model_file}"
@@ -571,12 +577,12 @@ def load_or_train_model(model_file):
         # remove the models/ prefix from the model name
         model_name = model_file.split("/")[0]
 
-        logging.info("Model sucessfully loaded: " + model_name)
+        logging.info("Model successfully loaded: " + model_name)
 
-        # Evaluate the model on the test data
-        loss, accuracy = model.evaluate(x_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0, to_categorical(y_test, 10))
-        model_accuracy = accuracy
-        logging.info(f"Model accuracy: {accuracy:.4f}")
+    # Evaluate the model on the test data
+    loss, accuracy = model.evaluate(x_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0, to_categorical(y_test, 10))
+    model_accuracy = accuracy
+    logging.info(f"Model accuracy: {accuracy:.4f}")
 
 def compute_confusion_matrix(y_true, y_pred, num_classes):
     confusion_matrix = np.zeros((num_classes, num_classes), dtype=int)
