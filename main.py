@@ -1,9 +1,10 @@
 import sys
 import numpy as np
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, \
-    QMessageBox, QListWidget, QComboBox
+    QMessageBox, QListWidget, QComboBox, QLineEdit, QInputDialog
 from PySide6.QtGui import QPainter, QMouseEvent, QImage, QColor, QPixmap, QPen
 from PySide6.QtCore import Qt, QPoint
+from pip._internal.utils import hashes
 from scipy.ndimage import label
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -13,6 +14,12 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
+
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+import base64
 
 import logging
 
@@ -306,22 +313,42 @@ class MainWindow(QMainWindow):
         reduced_embeddings = reduce_dimensions(embeddings)
         plot_embeddings(reduced_embeddings, y_test_data)
 
-
-
     def model_changed(self, i):
         global model
         global model_name
         global model_accuracy
 
-        #if the index is 0, then the user has selected the current model
+        # if the index is 0, then the user has selected the current model
         if i == 0:
             return
 
-        #load the selected model from the model list
+        # load the selected model from the model list
         selected_model_name = model_list[i - 1]
-        load_or_train_model(selected_model_name)
 
-        #reload main window
+        # prompt the user for a password to decrypt the model
+        password, ok = QInputDialog.getText(self, "Password Required", "Enter password to decrypt the model:",
+                                            QLineEdit.Password)
+        if not ok:
+            #reselect the 0 index default option
+            self.sender().setCurrentIndex(0)
+            return
+        if not password:
+            QMessageBox.warning(self, "Password Required", "Please enter a decryption password to continue.")
+            return
+
+
+
+        load_or_train_model(selected_model_name, password)
+
+        #if model is no defined, display an error message
+        if model is None:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setText(f"Failed to load the selected model. Please make sure the password is correct.")
+            msg_box.exec()
+            return
+
+        # reload main window
         self.close()
         main_window = MainWindow()
         main_window.show()
@@ -487,6 +514,13 @@ class ModelSelectionWindow(QWidget):
         for m in model_list:
             self.model_list_widget.addItem(m)
 
+        #add password field so that the user can enter the password to decrypt the model
+        self.password_field = QLineEdit()
+        self.password_field.setPlaceholderText("Enter password to decrypt model")
+        self.password_field.setEchoMode(QLineEdit.Password)
+
+
+
         self.continue_button = QPushButton("Continue")
         self.continue_button.clicked.connect(self.continue_button_clicked)
         self.continue_button.setStyleSheet("font-size: 14px; padding: 10px;")
@@ -494,11 +528,15 @@ class ModelSelectionWindow(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.model_list_label)
         self.layout.addWidget(self.model_list_widget)
+        self.layout.addWidget(self.password_field)
         self.layout.addWidget(self.continue_button)
 
         self.setLayout(self.layout)
         self.show()
         self.model_selection_window = self
+
+        #select the first item in the list by default
+        self.model_list_widget.setCurrentRow(0)
 
         logging.info("Rendering Model Selection Window")
 
@@ -507,6 +545,23 @@ class ModelSelectionWindow(QWidget):
     
     """
     def continue_button_clicked(self):
+        global model
+
+        #if password is not entered, display an error message
+        if self.password_field.text() == "":
+            logging.warning("No password entered")
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+
+            #if + Train a new model is selected, display a different message
+            if self.model_list_widget.currentItem().text() == "+ Train a new model":
+                msg_box.setText(f"Please enter a password to encrypt the new model.")
+            else:
+                msg_box.setText(f"Please enter the password to decrypt the model.")
+
+            msg_box.exec()
+            return
+
         # Get the selected model
         selected_model_name = self.model_list_widget.currentItem().text()
         logging.info(f"Selected Option: {selected_model_name}")
@@ -520,7 +575,27 @@ class ModelSelectionWindow(QWidget):
             msg_box.exec()
             return
 
-        load_or_train_model(selected_model_name)
+        password = self.password_field.text()
+
+        #if + Train a new model is selected, confirm the password with a dialog box
+        if selected_model_name == "+ Train a new model":
+            password, ok = QInputDialog.getText(self, "Confirm Password", "Please confirm the password to encrypt the new model:",
+                                                QLineEdit.Password)
+            if not ok:
+                return
+            if not password:
+                QMessageBox.warning(self, "Password Required", "Please enter a password to encrypt the new model.")
+                return
+
+        load_or_train_model(selected_model_name, password)
+
+        #if model is no defined, display an error message
+        if model is None:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setText(f"Failed to load the selected model. Please make sure the password is correct.")
+            msg_box.exec()
+            return
 
         self.model_selection_window.close()
         main_window = MainWindow()
@@ -530,7 +605,7 @@ class ModelSelectionWindow(QWidget):
 This function is in charge of loading the selected model or training a new model if the user selects the option to train a new model.
 
 """
-def load_or_train_model(model_file):
+def load_or_train_model(model_file, password):
     global model
     global model_name
     global model_accuracy
@@ -565,14 +640,34 @@ def load_or_train_model(model_file):
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
 
-        model.save(model_file)
+
+        # Define the path for the encrypted file
+        encrypted_file_path = os.path.join("models", f"encrypted_{len(model_list) + 1}.keras")
+
+        # Train and save the new model temporarily
+        model.save("temp_model.keras")
+
+        # Encrypt the model and save it in the models folder
+        encrypt_file("temp_model.keras", encrypted_file_path, password)
+
+        # Remove the temporary plain-text model file
+        os.remove("temp_model.keras")
+
         logging.info("Model successfully saved and loaded: " + model_file)
     else:
 
         file_name = f"models/{model_file}"
 
-        # load the model from the models directory using the tensorflow load_model function
-        model = load_model(file_name)
+        temp_model_file = "temp_model.keras"
+        try:
+            decrypt_file(file_name, temp_model_file, password)
+        except Exception as e:
+            logging.error(f"Failed to decrypt model: {e}")
+            model = None
+            return
+        model = load_model(temp_model_file)
+        os.remove(temp_model_file)
+        logging.info("Model successfully decrypted and loaded.")
 
         # remove the models/ prefix from the model name
         model_name = model_file.split("/")[0]
@@ -658,6 +753,52 @@ def plot_embeddings(embeddings, labels):
     plt.ylabel("Embedding Dimension 2")
     plt.tight_layout()
     plt.show()
+
+
+def derive_key(password: str, salt: bytes) -> bytes:
+    """Derive a symmetric encryption key from a password."""
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return kdf.derive(password.encode())
+
+
+def encrypt_file(input_file: str, output_file: str, password: str):
+    """Encrypt the model file using AES encryption."""
+    salt = os.urandom(16)
+    key = derive_key(password, salt)
+    with open(input_file, "rb") as f:
+        data = f.read()
+
+    cipher = Cipher(algorithms.AES(key), modes.GCM(salt), backend=default_backend())
+    encryptor = cipher.encryptor()
+    encrypted_data = encryptor.update(data) + encryptor.finalize()
+
+    with open(output_file, "wb") as f:
+        f.write(salt + encryptor.tag + encrypted_data)
+
+
+def decrypt_file(input_file: str, output_file: str, password: str):
+    """Decrypt the model file using AES decryption."""
+    with open(input_file, "rb") as f:
+        data = f.read()
+
+    salt = data[:16]
+    tag = data[16:32]
+    encrypted_data = data[32:]
+
+    key = derive_key(password, salt)
+    cipher = Cipher(algorithms.AES(key), modes.GCM(salt, tag), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    with open(output_file, "wb") as f:
+        f.write(decrypted_data)
+
 
 if __name__ == "__main__":
     global model_list
