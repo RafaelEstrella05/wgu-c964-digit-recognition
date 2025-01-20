@@ -29,9 +29,11 @@ class ModelSelectionWindow(QWidget):
         for m in state.model_list:
             self.model_list_widget.addItem(m)
 
+        self.model_list_widget.currentItemChanged.connect(lambda: self.password_field.setPlaceholderText("Enter Decryption Password" if self.model_list_widget.currentItem().text()[-6:] == ".keras" else "Enter Encryption Password"))
+
         #add password field so that the user can enter the password to decrypt the model
         self.password_field = QLineEdit()
-        self.password_field.setPlaceholderText("Enter password to decrypt model")
+        self.password_field.setPlaceholderText("Enter Encryption Password")
         self.password_field.setEchoMode(QLineEdit.Password)
 
 
@@ -114,8 +116,14 @@ class ModelSelectionWindow(QWidget):
 
             load_cnn_model(selected_model_name, pw)
 
+            if state.model is None:
+                return
+
         evaluate_model_accuracy()
 
         self.model_selection_window.close()
         main_window = MainWindow()
         main_window.show()
+
+if __name__ == "__main__":
+    print("Please run main.py to start the application.")

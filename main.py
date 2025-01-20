@@ -8,7 +8,7 @@ import log_config
 import state
 from cnn import load_mnist_data
 
-if __name__ == "__main__":
+def main():
     from view.model_selection_view import ModelSelectionWindow
 
     load_mnist_data()
@@ -29,3 +29,9 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(f"Error: {e}")
         sys.exit()
+
+if __name__ == "__main__":
+    print("-------------------------")
+    print("Starting main.py")
+    print("-------------------------")
+    main()

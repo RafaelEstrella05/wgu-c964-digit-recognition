@@ -307,18 +307,6 @@ class MainWindow(QMainWindow):
 
         load_cnn_model(selected_model_name, password)
 
-        # if model is no defined, display an error message
-        if state.model is None:
-            msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Critical)
-            msg_box.setText(f"Failed to load the selected model. Please make sure the password is correct.")
-            msg_box.exec()
-
-            # reselect the 0 index default option
-            self.sender().setCurrentIndex(0)
-
-            return
-
         #reevaluate the model accuracy
         evaluate_model_accuracy()
 
@@ -460,3 +448,6 @@ class MainWindow(QMainWindow):
 
         self.predicted_label.setText(f"Prediction: {predicted_digit}")
 
+
+if __name__ == "__main__":
+    print("Please run main.py to start the application.")

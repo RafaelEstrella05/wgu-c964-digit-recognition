@@ -49,3 +49,8 @@ def decrypt_file(input_file: str, output_file: str, password: str):
 
     with open(output_file, "wb") as f:
         f.write(decrypted_data)
+
+if __name__ == "__main__":
+    import main
+
+    main.main()

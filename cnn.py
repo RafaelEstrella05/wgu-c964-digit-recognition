@@ -1,5 +1,6 @@
 import os
 import tensorflow as tf
+from PySide6.QtWidgets import QMessageBox
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
@@ -32,7 +33,13 @@ def load_cnn_model(model_file, password):
         decrypt_file(file_name, temp_model_file, password)
     except Exception as e:
         logging.error(f"Failed to decrypt model: {e}")
-        state.model = None
+
+        # Display an error message
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setText(f"Failed to decrypt model. Please make sure the password is correct.")
+        msg_box.exec()
+
         return
 
     state.model = load_model(temp_model_file)
@@ -63,7 +70,7 @@ def train_new_model(password):
     state.model.fit(state.x_train_data, state.y_train_data, epochs=5, batch_size=128, validation_split=0.1)
 
     # Define the path for the encrypted file
-    encrypted_file_path = os.path.join("models", f"encrypted_{len(state.model_list) + 1}.keras")
+    encrypted_file_path = os.path.join("models", f"mnist_model_v_{len(state.model_list) + 1}.keras")
 
     # Train and save the new model temporarily
     state.model.save("temp_model.keras")
@@ -74,7 +81,7 @@ def train_new_model(password):
     # Remove the temporary plain-text model file
     os.remove("temp_model.keras")
 
-    logging.info("Model successfully saved and loaded: " + model_file)
+    logging.info("Model successfully saved and loaded: " + encrypted_file_path)
 
 
 def evaluate_model_accuracy():
@@ -83,3 +90,8 @@ def evaluate_model_accuracy():
                                           to_categorical(state.y_test_data, 10))
     state.model_accuracy = accuracy
     logging.info(f"Model accuracy: {accuracy:.4f}")
+
+if __name__ == "__main__":
+    import main
+
+    main.main()

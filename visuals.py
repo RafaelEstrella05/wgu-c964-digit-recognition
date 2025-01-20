@@ -79,3 +79,8 @@ def plot_embeddings(embeddings, labels):
     plt.ylabel("Embedding Dimension 2")
     plt.tight_layout()
     plt.show()
+
+if __name__ == "__main__":
+    import main
+
+    main.main()
