@@ -17,6 +17,10 @@ def main():
         app = QApplication(sys.argv)
         logging.info("Starting application")
 
+        # if models directory does not exist, create it
+        if not os.path.exists("models"):
+            os.makedirs("models")
+
         # get list of models from /models directory
         state.model_list = os.listdir("models")
 
