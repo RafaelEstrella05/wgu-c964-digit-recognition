@@ -18,14 +18,9 @@ from cnn import load_cnn_model, evaluate_model_accuracy
 from visuals import compute_confusion_matrix, plot_confusion_matrix, extract_embeddings, reduce_dimensions, \
     plot_embeddings
 
-"""
-This class is in charge of creating the canvas where the user can draw the digit. It contains the mouse event handlers
-for drawing the digit, the paint event handler for rendering the drawn digit, and the clearCanvas function to clear the
-canvas.
-"""
-
 
 class Canvas(QWidget):
+    """Canvas widget for drawing digits."""
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
@@ -36,11 +31,13 @@ class Canvas(QWidget):
         self.last_point = QPoint()
 
     def mousePressEvent(self, event):
+        """Handle mouse press events."""
         if event.button() == Qt.LeftButton:
             self.drawing = True
             self.last_point = event.position().toPoint()
 
     def mouseMoveEvent(self, event):
+        """Handle mouse move events."""
         if self.drawing and event.buttons() == Qt.LeftButton:
             painter = QPainter(self.image)
             pen = QPen(QColor(0, 0, 0))
@@ -59,6 +56,7 @@ class Canvas(QWidget):
         painter.drawImage(0, 0, self.image)
 
     def clearCanvas(self):
+        """Clear the canvas."""
         self.image.fill(Qt.white)
 
         # Clear the cropped and resized images
@@ -74,6 +72,7 @@ class Canvas(QWidget):
 
     # export the drawn digit to a numpy array
     def exportToArray(self):
+        """Export the drawn digit to a numpy array."""
         width, height = self.image.width(), self.image.height()
         pixel_array = np.zeros((height, width), dtype=np.uint8)
 
@@ -84,18 +83,16 @@ class Canvas(QWidget):
 
         return pixel_array
 
-    """
-        Crop the input pixel array to the bounding box of the digit. so that the digit is centered and padded.
-
-        Args:
-            pixel_array (np.ndarray): The input pixel array representing the drawn digit. 
-
-        Returns:
-            np.ndarray: The cropped pixel array containing the digit. 
-            size of the array is proportional to the size of the digit drawn in the canvas.
-        """
 
     def cropToBoundingBox(self, pixel_array):
+        """
+        Crop the input pixel array to the bounding box of the digit.
+        Args:
+            pixel_array (np.ndarray): The input pixel array representing the drawn digit.
+
+        Returns:
+            np.ndarray: The cropped pixel array containing the digit.
+        """
         rows = np.any(pixel_array, axis=1)
         cols = np.any(pixel_array, axis=0)
 
@@ -130,28 +127,25 @@ class Canvas(QWidget):
         cropped_array = pixel_array[y_min:y_max + 1, x_min:x_max + 1]
         return cropped_array
 
-    """
-    Resize the input pixel array to 28x28 pixels using bilinear interpolation.
-
-    Args:
-        cropped_array (np.ndarray): The input pixel array representing the cropped digit.
-
-    Returns:
-        np.ndarray: The resized pixel array containing the digit.
-        The size of the array is 28x28 pixels.    
-    """
 
     def resizeTo28x28(self, cropped_array):
+        """
+        Resize the cropped digit to 28x28 pixels.
+        Args:
+            cropped_array (np.ndarray): The cropped pixel array containing the digit.
+
+        Returns:
+            np.ndarray: The resized pixel array of the digit.
+        """
         return np.array(tf.image.resize(cropped_array[..., np.newaxis], [28, 28]).numpy() > 0.5,
                         dtype=np.uint8).squeeze()
 
 
-"""
-This class is in charge of creating the main window of the application. It contains the canvas where the user can draw
-the digit, the preprocessing steps, the prediction label, the clear and predict buttons, and the bar graph displaying
-the class probabilities.
-"""
+
 class MainWindow(QMainWindow):
+    """
+    Main application window for the MNIST Digit Recognizer.
+    """
     def __init__(self):
 
         super().__init__()

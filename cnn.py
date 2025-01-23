@@ -4,94 +4,105 @@ from PySide6.QtWidgets import QMessageBox
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
-#---
-
 import logging
-import log_config # log_config.py
-import state
+import log_config  # Custom logging configuration
+import state  # Global application state
 from encryption import decrypt_file, encrypt_file
 
-
 def load_mnist_data():
-    # Load MNIST dataset and preprocess
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
-    y_train = to_categorical(y_train, 10)
+    """Load and preprocess the MNIST dataset."""
+    try:
+        (x_train, y_train), (x_test, y_test) = mnist.load_data()
+        # Normalize pixel values to the range [0, 1] and reshape for CNN
+        x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+        y_train = to_categorical(y_train, 10)
 
-    state.x_train_data = x_train
-    state.y_train_data = y_train
-    state.x_test_data = x_test
-    state.y_test_data = y_test
-
+        state.x_train_data = x_train
+        state.y_train_data = y_train
+        state.x_test_data = x_test
+        state.y_test_data = y_test
+        logging.info("MNIST dataset loaded and preprocessed.")
+    except Exception as e:
+        logging.error(f"Error loading MNIST data: {e}")
 
 def load_cnn_model(model_file, password):
-
-    file_name = f"models/{model_file}"
-
+    """Decrypt and load a pre-trained CNN model."""
+    file_path = f"models/{model_file}"
     temp_model_file = "temp_model.keras"
+
     try:
-        decrypt_file(file_name, temp_model_file, password)
+        # Decrypt the model file
+        decrypt_file(file_path, temp_model_file, password)
+        state.model = load_model(temp_model_file)
+        os.remove(temp_model_file)
+
+        # Store the model name in the global state
+        state.model_name = os.path.basename(model_file).split(".")[0]
+        logging.info(f"Model {state.model_name} successfully loaded.")
     except Exception as e:
-        logging.error(f"Failed to decrypt model: {e}")
-
-        # Display an error message
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setText(f"Failed to decrypt model. Please make sure the password is correct.")
-        msg_box.exec()
-
-        return
-
-    state.model = load_model(temp_model_file)
-    os.remove(temp_model_file)
-
-    # remove the models/ prefix from the model name
-    state.model_name = model_file.split("/")[0]
-    logging.info("Model successfully decrypted and loaded")
-
+        logging.error(f"Failed to decrypt and load model: {e}")
+        show_error_message("Failed to decrypt model. Please ensure the password is correct.")
 
 def train_new_model(password):
-    model_file = f"models/mnist_model_v_{len(state.model_list) + 1}.keras"
+    """Train a new CNN model on the MNIST dataset and save it encrypted."""
+    try:
+        model_name = f"mnist_model_v_{len(state.model_list) + 1}"
+        model_file = f"models/{model_name}.keras"
 
-    # extract the model name from the file path
-    state.model_name = model_file.split("/")[1]
-    logging.info("Training new model: " + state.model_name)
+        logging.info(f"Starting training for {model_name}.")
 
-    state.model = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(10, activation='softmax')
-    ])
-    state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    state.model.fit(state.x_train_data, state.y_train_data, epochs=5, batch_size=128, validation_split=0.1)
+        # Define the CNN architecture
+        state.model = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Dropout(0.25),
+            tf.keras.layers.Conv2D(128, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Conv2D(256, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Dropout(0.25),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(512, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(10, activation='softmax')
+        ])
 
-    # Define the path for the encrypted file
-    encrypted_file_path = os.path.join("models", f"mnist_model_v_{len(state.model_list) + 1}.keras")
+        # Compile the model
+        state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # Train and save the new model temporarily
-    state.model.save("temp_model.keras")
+        # Train the model
+        state.model.fit(state.x_train_data, state.y_train_data, epochs=10, batch_size=128, validation_split=0.1)
 
-    # Encrypt the model and save it in the models folder
-    encrypt_file("temp_model.keras", encrypted_file_path, password)
+        # Save and encrypt the model
+        state.model.save("temp_model.keras")
+        encrypt_file("temp_model.keras", model_file, password)
+        os.remove("temp_model.keras")
 
-    # Remove the temporary plain-text model file
-    os.remove("temp_model.keras")
-
-    logging.info("Model successfully saved and loaded: " + encrypted_file_path)
-
+        logging.info(f"Model {model_name} successfully trained and saved.")
+    except Exception as e:
+        logging.error(f"Error during model training: {e}")
 
 def evaluate_model_accuracy():
-    # Evaluate the model on the test data
-    loss, accuracy = state.model.evaluate(state.x_test_data.reshape(-1, 28, 28, 1).astype('float32') / 255.0,
-                                          to_categorical(state.y_test_data, 10))
-    state.model_accuracy = accuracy
-    logging.info(f"Model accuracy: {accuracy:.4f}")
+    """Evaluate the model's accuracy on the test dataset."""
+    try:
+        # Normalize and reshape test data
+        x_test = state.x_test_data.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+        y_test = to_categorical(state.y_test_data, 10)
+
+        loss, accuracy = state.model.evaluate(x_test, y_test)
+        state.model_accuracy = accuracy
+        logging.info(f"Model accuracy: {accuracy:.4f}")
+    except Exception as e:
+        logging.error(f"Error evaluating model accuracy: {e}")
+
+def show_error_message(message):
+    """Display an error message using QMessageBox."""
+    msg_box = QMessageBox()
+    msg_box.setIcon(QMessageBox.Warning)
+    msg_box.setText(message)
+    msg_box.exec()
 
 if __name__ == "__main__":
     import main
-
     main.main()
