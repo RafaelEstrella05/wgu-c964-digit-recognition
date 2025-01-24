@@ -50,6 +50,7 @@ class Canvas(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.drawing = False
+            self.main_window.validate_and_predict()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -152,6 +153,9 @@ class MainWindow(QMainWindow):
         self.msg_box = None
         self.setWindowTitle("MNIST Digit Recognizer")
 
+        #resize window
+        self.setFixedSize(1000, 700)
+
         self.canvas = Canvas(self)
 
         self.preprocess_label = QLabel("Preprocessing Steps")
@@ -172,9 +176,11 @@ class MainWindow(QMainWindow):
         self.clear_button.clicked.connect(self.canvas.clearCanvas)
         self.clear_button.setStyleSheet("font-size: 14px; padding: 10px;")
 
+        """
         self.predict_button = QPushButton("Predict")
         self.predict_button.clicked.connect(self.validate_and_predict)
         self.predict_button.setStyleSheet("font-size: 14px; padding: 10px;")
+        """
 
         self.figure, self.ax = plt.subplots()
         self.bar_canvas = FigureCanvas(self.figure)
@@ -182,7 +188,7 @@ class MainWindow(QMainWindow):
 
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.clear_button)
-        button_layout.addWidget(self.predict_button)
+        #button_layout.addWidget(self.predict_button)
 
         # create confusion button
         self.confusion_button = QPushButton("Confusion Matrix")
@@ -314,12 +320,18 @@ class MainWindow(QMainWindow):
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
 
+
+
         self.ax.clear()
         self.ax.bar(range(10), probabilities, color='blue')
         self.ax.set_xticks(range(10))
         self.ax.set_xlabel("Digits")
         self.ax.set_ylabel("Probability")
         self.ax.set_title("Digit Probabilities")
+
+        #make graph fit in its section
+        self.figure.tight_layout()
+
         self.bar_canvas.draw()
 
     """
@@ -341,7 +353,7 @@ class MainWindow(QMainWindow):
 
         # check if there are any valid clusters that meet the min pixel threshold
         for i in range(1, num_features + 1):
-            cluster_size = np.sum(labeled_array == i)
+            cluster_size = np.sum(labeled_array == i) # count the number of pixels in the cluster
             if cluster_size >= min_pixel_threshold:
                 valid_clusters += 1
 
