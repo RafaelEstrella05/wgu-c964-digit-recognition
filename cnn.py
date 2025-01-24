@@ -43,11 +43,11 @@ def load_cnn_model(model_file, password):
         logging.error(f"Failed to decrypt and load model: {e}")
         show_error_message("Failed to decrypt model. Please ensure the password is correct.")
 
-def train_new_model(password):
+def train_new_model(model_name, password):
     """Train a new CNN model on the MNIST dataset and save it encrypted."""
     try:
-        model_name = f"mnist_model_v_{len(state.model_list) + 1}"
-        model_file = f"models/{model_name}.keras"
+        #model_name = f"mnist_model_v_{len(state.model_list) + 1}"
+
 
         logging.info(f"Starting training for {model_name}.")
 
@@ -71,10 +71,27 @@ def train_new_model(password):
         # Train the model
         state.model.fit(state.x_train_data, state.y_train_data, epochs=5, batch_size=128, validation_split=0.1)
 
+        state.model_name = model_name
+
+        #if model_name is in model_list, then add a number to the end of the model name
+        if model_name + ".keras" in state.model_list:
+            model_name = model_name + "_1"
+
+        #add model to the state
+        state.model_list.append(f"{state.model_name}.keras")
+        #add model to the state
+        state.model_name = f"{state.model_name}.keras"
+
+
+        model_file = f"models/{state.model_name}"
+        print("model file: ", model_file)
+
         # Save and encrypt the model
         state.model.save("temp_model.keras")
         encrypt_file("temp_model.keras", model_file, password)
         os.remove("temp_model.keras")
+
+
 
         logging.info(f"Model {model_name} successfully trained and saved.")
     except Exception as e:
