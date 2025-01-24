@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QLabel,
-    QMessageBox, QListWidget, QLineEdit, QInputDialog
+    QMessageBox, QListWidget, QLineEdit, QInputDialog, QDialog, QFormLayout, QDialogButtonBox
 )
 import logging
 
@@ -28,10 +28,6 @@ class ModelSelectionWindow(QWidget):
         for model_name in state.model_list:
             self.model_list_widget.addItem(model_name)
 
-        # Password field
-        self.password_field = QLineEdit()
-        self.password_field.setPlaceholderText("Enter Encryption/Decryption Password")
-        self.password_field.setEchoMode(QLineEdit.Password)
 
         # Continue button
         self.continue_button = QPushButton("Continue")
@@ -42,7 +38,6 @@ class ModelSelectionWindow(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.model_list_label)
         self.layout.addWidget(self.model_list_widget)
-        self.layout.addWidget(self.password_field)
         self.layout.addWidget(self.continue_button)
 
         self.setLayout(self.layout)
@@ -51,31 +46,32 @@ class ModelSelectionWindow(QWidget):
 
     def continue_button_clicked(self):
         """Handle the continue button click event."""
-        password = self.password_field.text()
-        if not password:
-            self.display_warning("Please enter a password.")
-            return
 
         selected_item = self.model_list_widget.currentItem().text()
         if selected_item == "+ Train a new model":
-            self.handle_new_model_training(password)
+            dialog = ModelTrainingForm()
+            if dialog.exec() == QDialog.Accepted:
+                model_name, password, confirm_password = dialog.get_inputs()
+
+                self.handle_new_model_training(model_name, password)
         else:
+            password, ok = QInputDialog.getText(self, "Enter Password", "Enter Decryption Password:",
+                                                QLineEdit.Password)
+            if not ok:
+                return
+
+            if not password:
+                self.display_warning("Please enter a password.")
+                return
+
             self.handle_model_loading(selected_item, password)
 
-    def handle_new_model_training(self, password):
+    def handle_new_model_training(self, model_name,  password):
         """Handle training a new model with a password."""
-        confirm_password, ok = QInputDialog.getText(
-            self, "Confirm Password", "Confirm the password to encrypt the new model:", QLineEdit.Password
-        )
-        if not ok or confirm_password != password:
-            self.display_warning("Passwords do not match. Please try again.")
-            return
 
-        train_new_model(password)
+
+        train_new_model(model_name, password)
         evaluate_model_accuracy()
-
-        #add model name to the state
-        state.model_name = f"mnist_model_v_{len(state.model_list) + 1}"
 
         self.close_and_open_main_window()
 
@@ -104,6 +100,73 @@ class ModelSelectionWindow(QWidget):
         msg_box.setIcon(QMessageBox.Warning)
         msg_box.setText(message)
         msg_box.exec()
+
+class ModelTrainingForm(QDialog):
+    """
+    Dialog for inputting model name and password for training a new model.
+    """
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Train New Model")
+        self.setGeometry(100, 100, 300, 200)
+
+        self.layout = QFormLayout()
+
+        self.model_name_input = QLineEdit()
+        self.model_name_input.textChanged.connect(self.input_changed)
+        self.layout.addRow("Model Name:", self.model_name_input)
+
+
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_input.textChanged.connect(self.input_changed)
+        self.layout.addRow("Encryption Password:", self.password_input)
+
+
+        self.confirm_password_input = QLineEdit()
+        self.confirm_password_input.setEchoMode(QLineEdit.Password)
+        self.confirm_password_input.textChanged.connect(self.input_changed)
+        self.layout.addRow("Confirm Password:", self.confirm_password_input)
+
+        #create label for showing message
+        self.message_label = QLabel("...")
+        self.layout.addRow(self.message_label)
+
+        self.setLayout(self.layout)
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        #disable the ok button by default
+        self.buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+
+        self.layout.addWidget(self.buttons)
+
+
+    def input_changed(self):
+        """Enable the OK button if all inputs are valid."""
+        model_name, password, confirm_password = self.get_inputs()
+        invalid_chars = set(r'\/:*?"<>|')
+        if (model_name and password and confirm_password and
+                password == confirm_password and
+                model_name + ".keras" not in state.model_list and
+                not any(char in invalid_chars for char in model_name)):
+            self.buttons.button(QDialogButtonBox.Ok).setEnabled(True)
+            self.message_label.setText("")
+        else:
+            self.buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+            if password != confirm_password:
+                self.message_label.setText("Passwords do not match.")
+            elif model_name + ".keras" in state.model_list:
+                self.message_label.setText("Model name already exists.")
+            elif any(char in invalid_chars for char in model_name):
+                self.message_label.setText("Model name contains invalid characters.")
+            else:
+                self.message_label.setText("Please fill in all fields.")
+
+    def get_inputs(self):
+        return self.model_name_input.text(), self.password_input.text(), self.confirm_password_input.text()
 
 if __name__ == "__main__":
     print("Please run main.py to start the application.")
