@@ -73,6 +73,10 @@ class ModelSelectionWindow(QWidget):
 
         train_new_model(password)
         evaluate_model_accuracy()
+
+        #add model name to the state
+        state.model_name = f"mnist_model_v_{len(state.model_list) + 1}"
+
         self.close_and_open_main_window()
 
     def handle_model_loading(self, model_name, password):
