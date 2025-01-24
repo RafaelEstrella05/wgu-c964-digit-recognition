@@ -14,7 +14,7 @@ def load_mnist_data():
     try:
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
         # Normalize pixel values to the range [0, 1] and reshape for CNN
-        x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+        x_train = x_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0 #convert to float32 28x28x1 (the 1 is for
         y_train = to_categorical(y_train, 10)
 
         state.x_train_data = x_train
@@ -53,26 +53,23 @@ def train_new_model(password):
 
         # Define the CNN architecture
         state.model = tf.keras.Sequential([
+
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            tf.keras.layers.MaxPooling2D((2, 2)),
             tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Dropout(0.25),
-            tf.keras.layers.Conv2D(128, (3, 3), activation='relu'),
-            tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Conv2D(256, (3, 3), activation='relu'),
-            tf.keras.layers.MaxPooling2D((2, 2)),
-            tf.keras.layers.Dropout(0.25),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(512, activation='relu'),
+            tf.keras.layers.Dense(128, activation='relu'),
             tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Dense(10, activation='softmax')
+
         ])
 
         # Compile the model
         state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Train the model
-        state.model.fit(state.x_train_data, state.y_train_data, epochs=10, batch_size=128, validation_split=0.1)
+        state.model.fit(state.x_train_data, state.y_train_data, epochs=5, batch_size=128, validation_split=0.1)
 
         # Save and encrypt the model
         state.model.save("temp_model.keras")
