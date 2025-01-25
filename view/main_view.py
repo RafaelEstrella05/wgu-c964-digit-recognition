@@ -334,6 +334,9 @@ class MainWindow(QMainWindow):
 
         self.bar_canvas.draw()
 
+        #close the figure
+        plt.close()
+
     """
     This function is in charge of validating the input drawn by the user and predicting the digit using the CNN model.
 
