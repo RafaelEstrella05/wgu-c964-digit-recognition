@@ -29,6 +29,7 @@ This project is an interactive digit recognition application designed for develo
 
 ## System Requirements
 
+- **Operating System**: Windows, macOS, Linux
 - **Python Version**: 3.10+
 - **Dependencies**:
   - `tensorflow`
@@ -38,6 +39,7 @@ This project is an interactive digit recognition application designed for develo
   - `PySide6`
   - `scipy`
   - `cryptography`
+
 
 Install dependencies via pip:
 ```bash
@@ -96,6 +98,9 @@ pip install tensorflow keras numpy matplotlib PySide6 scipy cryptography
 4. **Visualize Results**:
    - Analyze predictions with confusion matrices.
    - Explore embeddings via scatter plots.
+
+### Sample Model:
+- load the sample model `sample_model.keras` with password `password` to load and use.
 
 ---
 
