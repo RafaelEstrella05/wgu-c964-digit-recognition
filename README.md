@@ -48,7 +48,7 @@ pip install tensorflow keras numpy matplotlib PySide6 scipy cryptography
 
 ## Installation and Setup
 
-### PyCharm Setup
+### PyCharm Setup (Recommended)
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/RafaelEstrella05/wgu-c964-digit-recognition.git
@@ -64,7 +64,7 @@ pip install tensorflow keras numpy matplotlib PySide6 scipy cryptography
 5. **Run the Application**:
    - Open `main.py` in the editor and click the "Run" button to launch the application.
 
-### Manual Setup (Optional)
+### Manual Setup (Alternative)
 
 1. **Clone the Repository**:
    ```bash
