@@ -16,6 +16,10 @@ def compute_confusion_matrix(y_true, y_pred, num_classes):
     Returns:
         np.ndarray: A confusion matrix of shape (num_classes, num_classes).
     """
+    # clear the current plot
+    plt.clf()
+    plt.close()
+
     confusion_matrix = np.zeros((num_classes, num_classes), dtype=int)
     for true_label, predicted_label in zip(y_true, y_pred):
         confusion_matrix[true_label, predicted_label] += 1
@@ -28,7 +32,11 @@ def plot_confusion_matrix(confusion_matrix, classes):
         confusion_matrix (np.ndarray): Confusion matrix to visualize.
         classes (list): List of class labels.
     """
+
+    # clear the current plot
     plt.clf()
+    plt.close()
+
     plt.figure(figsize=(8, 8))
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title(f"Confusion Matrix: {state.model_name}")
@@ -100,7 +108,7 @@ def plot_embeddings(embeddings, labels):
         embeddings (np.ndarray): 2D embeddings to visualize.
         labels (array-like): Class labels for coloring the points.
     """
-    plt.clf()
+
     plt.figure(figsize=(10, 10))
 
     scatter = plt.scatter(embeddings[:, 0], embeddings[:, 1], c=labels, cmap='tab10', s=10, alpha=0.7)
