@@ -24,9 +24,10 @@ class ModelSelectionWindow(QWidget):
         self.model_list_widget.setStyleSheet("font-size: 14px; padding: 2px;")
         self.model_list_widget.addItem("+ Train a new model")
 
-        # Populate the model list
+        # Populate the model list, add only .keras files
         for model_name in state.model_list:
-            self.model_list_widget.addItem(model_name)
+            if model_name.endswith(".keras"):
+                self.model_list_widget.addItem(model_name)
 
 
         # Continue button
@@ -55,6 +56,12 @@ class ModelSelectionWindow(QWidget):
 
                 self.handle_new_model_training(model_name, password)
         else:
+            #make sure the file is a valid model file .keras
+            if not selected_item.endswith(".keras"):
+                self.display_warning("Please select a valid Keras model file (.keras).")
+                return
+
+
             password, ok = QInputDialog.getText(self, "Enter Password", "Enter Decryption Password:",
                                                 QLineEdit.Password)
             if not ok:
