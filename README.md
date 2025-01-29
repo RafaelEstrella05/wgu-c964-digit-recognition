@@ -54,6 +54,10 @@ Before installing the application, please ensure that you have the following:
 ### Installation
 1. Download the ZIP file from the provided submission.
 2. Extract the ZIP file to a folder on your computer.
+3. (Optional) run the following command to clone the repository:
+   ```bash
+   git clone https://github.com/RafaelEstrella05/wgu-c964-digit-recognition.git
+    ```
 3. Open **PyCharm Community Edition** and select **"Open"** from the welcome screen.
 4. Navigate to the extracted folder and open the project.
 5. Ensure **Python 3.10** is selected as the interpreter:
