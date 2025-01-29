@@ -43,59 +43,101 @@ def load_cnn_model(model_file, password):
         logging.error(f"Failed to decrypt and load model: {e}")
         show_error_message("Failed to decrypt model. Please ensure the password is correct.")
 
-def train_new_model(model_name, password):
-    """Train a new CNN model on the MNIST dataset and save it encrypted."""
+def train_new_model_v1(model_name, password):
+    """Train a basic CNN model with minimal configuration."""
     try:
-        #model_name = f"mnist_model_v_{len(state.model_list) + 1}"
+        logging.info(f"Starting training for {model_name} - Version 1.")
 
-
-        logging.info(f"Starting training for {model_name}.")
-
-        # Define the CNN architecture
+        # Version 1: Simple model with one convolutional and pooling layer
         state.model = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(16, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(10, activation='softmax')
+        ])
 
+        state.model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
+        state.model.fit(state.x_train_data, state.y_train_data, epochs=3, batch_size=128, validation_split=0.1)
+        save_and_encrypt_model(model_name, password)
+
+        logging.info("Version 1 completed: Basic architecture with SGD optimizer.")
+    except Exception as e:
+        logging.error(f"Error during model training (Version 1): {e}")
+
+
+def train_new_model_v2(model_name, password):
+    """Train a CNN model with increased complexity and improved optimizer."""
+    try:
+        logging.info(f"Starting training for {model_name} - Version 2.")
+
+        # Version 2: Add an additional convolutional layer and switch to Adam optimizer
+        state.model = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D((2, 2)),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dense(10, activation='softmax')
+        ])
+
+        state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        state.model.fit(state.x_train_data, state.y_train_data, epochs=5, batch_size=128, validation_split=0.1)
+        save_and_encrypt_model(model_name, password)
+
+        logging.info("Version 2 completed: Additional convolutional layer and Adam optimizer.")
+    except Exception as e:
+        logging.error(f"Error during model training (Version 2): {e}")
+
+
+def train_new_model_v3(model_name, password):
+    """Train a CNN model with dropout and larger dense layers."""
+    try:
+        logging.info(f"Starting training for {model_name} - Version 3.")
+
+        # Version 3: Introduce dropout layers to reduce overfitting
+        state.model = tf.keras.Sequential([
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
             tf.keras.layers.MaxPooling2D((2, 2)),
             tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D((2, 2)),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dropout(0.3),
             tf.keras.layers.Dense(10, activation='softmax')
-
         ])
 
-        # Compile the model
         state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        state.model.fit(state.x_train_data, state.y_train_data, epochs=8, batch_size=64, validation_split=0.1)
+        save_and_encrypt_model(model_name, password)
 
-        # Train the model
-        state.model.fit(state.x_train_data, state.y_train_data, epochs=5, batch_size=128, validation_split=0.1)
+        logging.info("Version 3 completed: Dropout layers added to reduce overfitting.")
+    except Exception as e:
+        logging.error(f"Error during model training (Version 3): {e}")
 
-        state.model_name = model_name
+def train_new_model(model_name, password):
+    #train_new_model_v1(model_name, password) # Version 1: 91.83% accuracy
+    #train_new_model_v2(model_name, password) # Version 2: 98.87% accuracy
+    train_new_model_v3(model_name, password) # Version 3: 99.25%
 
-        #if model_name is in model_list, then add a number to the end of the model name
-        if model_name + ".keras" in state.model_list:
-            model_name = model_name + "_1"
+    #update model name
+    state.model_name = model_name
+    evaluate_model_accuracy()
+    logging.info("Model training completed successfully.")
+    state.model_list.append(model_name)
 
-        #add model to the state
-        state.model_list.append(f"{state.model_name}.keras")
-        #add model to the state
-        state.model_name = f"{state.model_name}.keras"
-
-
-        model_file = f"models/{state.model_name}"
-        print("model file: ", model_file)
-
-        # Save and encrypt the model
+def save_and_encrypt_model(model_name, password):
+    """Helper function to save and encrypt the trained model."""
+    try:
+        model_file = f"models/{model_name}.keras"
         state.model.save("temp_model.keras")
         encrypt_file("temp_model.keras", model_file, password)
         os.remove("temp_model.keras")
-
-
-
-        logging.info(f"Model {model_name} successfully trained and saved.")
+        logging.info(f"Model {model_name} successfully saved and encrypted.")
     except Exception as e:
-        logging.error(f"Error during model training: {e}")
+        logging.error(f"Error saving and encrypting model: {e}")
+
 
 def evaluate_model_accuracy():
     """Evaluate the model's accuracy on the test dataset."""
