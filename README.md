@@ -58,14 +58,15 @@ Before installing the application, please ensure that you have the following:
 4. Navigate to the extracted folder and open the project.
 5. Ensure **Python 3.10** is selected as the interpreter:
    - Go to `File > Settings > Project: wgu-c964-digit-recognition > Python Interpreter`.
-   - Select **Python 3.10**.
+   - Click on Add Interpreter and generate a virtual environment using virtualenv
+   - Apply and Exit
 6. Install dependencies automatically:
-   - PyCharm will detect a `requirements.txt` file and prompt for installation.
    - If prompted, click **"Install Requirements"** to install the necessary dependencies.
-   - To manually install dependencies, navigate to the PyCharm console and run:
+   - To manually install dependencies, navigate to the PyCharm console and run: 
      ```bash
      pip install -r requirements.txt
      ```
+     note: this should be after creating a new virtual environment to make sure pip works
 
 ### Running the Application
 1. Open the `main.py` file in **PyCharm**.
