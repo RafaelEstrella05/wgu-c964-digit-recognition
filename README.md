@@ -74,6 +74,7 @@ Before installing the application, please ensure that you have the following:
 
 ### Testing the Application
 1. Once the application starts, the GUI will launch, allowing you to select or train a new CNN model for digit recognition.
+   a. Note: the password to access the included cnn models is "password"
 2. Once the model has been selected or trained, the application's main window will appear, allowing the user to draw digits on a canvas.
 
 ### Uninstalling the Application
