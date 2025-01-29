@@ -20,7 +20,7 @@ This project is an interactive digit recognition application designed for develo
   - Visualize embeddings using scatter plots with dimensionality reduction.
 
 ### CNN Customization and Optimization
-- Modify the CNN architecture and hyperparameters in the cnn.py file  to improve performance:
+- Modify the CNN architecture and hyperparameters in the `cnn.py` file to improve performance:
   - Number of filters and neurons.
   - Learning rate and activation functions.
   - Batch size, dropout rate, and epochs.
@@ -40,98 +40,49 @@ This project is an interactive digit recognition application designed for develo
   - `scipy`
   - `cryptography`
 
-
-Install dependencies via pip:
-```bash
-pip install tensorflow keras numpy matplotlib PySide6 scipy cryptography
-```
-
 ---
 
-## Installation and Setup
+## Installation and Usage
 
-### PyCharm Setup (Recommended)
-1. **Clone the Repository**:
+This guide provides a step-by-step process for installing and using the Digit Recognition App in PyCharm Community Edition with Python 3.10.
+
+### Prerequisites
+Before installing the application, please ensure that you have the following:
+1. **PyCharm Community Edition** ([Download Here](https://www.jetbrains.com/pycharm/download/))
+2. **Python 3.10** ([Download Here](https://www.python.org/downloads/))
+
+### Installation
+1. Download the ZIP file from the provided submission.
+2. Extract the ZIP file to a folder on your computer.
+3. Open **PyCharm Community Edition** and select **"Open"** from the welcome screen.
+4. Navigate to the extracted folder and open the project.
+5. Ensure **Python 3.10** is selected as the interpreter:
+   - Go to `File > Settings > Project: wgu-c964-digit-recognition > Python Interpreter`.
+   - Select **Python 3.10**.
+6. Install dependencies automatically:
+   - PyCharm will detect a `requirements.txt` file and prompt for installation.
+   - If prompted, click **"Install Requirements"** to install the necessary dependencies.
+   - To manually install dependencies, navigate to the PyCharm console and run:
+     ```bash
+     pip install -r requirements.txt
+     ```
+
+### Running the Application
+1. Open the `main.py` file in **PyCharm**.
+2. At the top right of the screen, click on the **Play** button to run the main script.
+   - Click `Run > Run 'main'` or press `Shift + F10`.
+
+### Testing the Application
+1. Once the application starts, the GUI will launch, allowing you to select or train a new CNN model for digit recognition.
+2. Once the model has been selected or trained, the application's main window will appear, allowing the user to draw digits on a canvas.
+
+### Uninstalling the Application
+If you no longer need the application:
+1. Simply delete the project folder.
+2. **Optional**: Remove installed dependencies by running:
    ```bash
-   git clone https://github.com/RafaelEstrella05/wgu-c964-digit-recognition.git
-   cd wgu-c964-digit-recognition
+   pip uninstall -r requirements.txt -y
    ```
-2. **Open the Project in PyCharm**:
-   - Launch PyCharm and select "Open" to navigate to the project folder.
-3. **Configure Python Interpreter**:
-   - Go to `File > Settings > Project: <project-name> > Python Interpreter`.
-   - Set the interpreter to Python 3.10 or later.
-4. **Install Dependencies**:
-   - Use PyCharm's terminal or the "+" button in the Python Interpreter settings to install required packages.
-5. **Run the Application**:
-   - Open `main.py` in the editor and click the "Run" button to launch the application.
-
-### Manual Setup (Alternative)
-
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/RafaelEstrella05/wgu-c964-digit-recognition.git
-   
-   cd wgu-c964-digit-recognition
-   ```
-2. **Install Dependencies**:
-   ```bash
-   pip install tensorflow keras numpy matplotlib PySide6 scipy cryptography
-   ```
-3. **Run the Application**:
-   ```bash
-   python main.py
-   ```
-
----
-
-## Usage Instructions
-
-### GUI Workflow
-1. **Launch the App**: Open the application to start exploring digit recognition.
-2. **Select or Train a Model**:
-   - Choose an existing model from the dropdown list.
-   - Train a new model by entering a unique model name and password.
-3. **Draw and Predict**:
-   - Use the canvas to draw a digit.
-   - View the prediction and confidence scores.
-4. **Visualize Results**:
-   - Analyze predictions with confusion matrices.
-   - Explore embeddings via scatter plots.
-
-### Sample Model:
-- load the sample model `sample_model.keras` with password `password` to load and use.
-
----
-
-## Development Overview
-
-The application includes the following modules:
-
-1. **CNN Architecture (`cnn.py`)**:
-   - Implements the convolutional neural network and handles training, testing, and saving/loading models.
-2. **Encryption Utilities (`encryption.py`)**:
-   - Provides AES-GCM encryption for secure model storage.
-3. **GUI Components (`main_view.py`, `model_selection_view.py`)**:
-   - Implements the digit drawing canvas, model selection, and visualization tools.
-4. **Visualization Tools (`visuals.py`)**:
-   - Offers tools for confusion matrix plotting and embedding visualization.
-
----
-
-## Customization and Improvement
-
-### Tweaking the CNN Model
-Adjust the parameters in `cnn.py`:
-- **Filters**: Modify the number of filters in convolutional layers.
-- **Learning Rate**: Change optimizer settings.
-- **Activation Functions**: Experiment with activation functions.
-- **Training Duration**: Increase the number of epochs or batch size.
-
-### Adding New Features
-To extend functionality, consider:
-- Incorporating additional datasets for broader use cases.
-- Supporting other machine learning tasks beyond digit recognition.
 
 ---
 
@@ -146,8 +97,6 @@ To extend functionality, consider:
 
 This project is developed as part of the WGU Computer Science Capstone Project for educational use. For further inquiries, contact the project author.
 
-Rafael Estrella Paz
-
-Email: rafael.estrella05@gmail.com
-
+**Rafael Estrella Paz**  
+📧 Email: [rafael.estrella05@gmail.com](mailto:rafael.estrella05@gmail.com)
 
