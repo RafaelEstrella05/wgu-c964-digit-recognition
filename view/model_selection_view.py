@@ -77,10 +77,22 @@ class ModelSelectionWindow(QWidget):
         """Handle training a new model with a password."""
 
 
-        train_new_model(model_name, password)
-        evaluate_model_accuracy()
+        # display "A New Model Will be Trained: Please watch the console for progress." and wait for confirmation to click ok
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setText("A New Model Will be Trained: Please watch the console for progress.")
 
-        self.close_and_open_main_window()
+        if msg_box.exec() == QMessageBox.Ok:
+            # close the current window
+            self.close()
+
+            train_new_model(model_name, password)
+            evaluate_model_accuracy()
+
+            #open the main window
+            main_window = MainWindow()
+            main_window.show()
+
 
     def handle_model_loading(self, model_name, password):
         """Handle loading an existing model with decryption."""
@@ -93,11 +105,10 @@ class ModelSelectionWindow(QWidget):
             return
 
         evaluate_model_accuracy()
-        self.close_and_open_main_window()
 
-    def close_and_open_main_window(self):
-        """Close the current window and open the main application window."""
+        #close the current window
         self.close()
+        #open the main window
         main_window = MainWindow()
         main_window.show()
 
