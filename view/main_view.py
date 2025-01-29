@@ -241,6 +241,9 @@ class MainWindow(QMainWindow):
         #reload the model list
         state.model_list = os.listdir("models")
 
+        #filter out non .keras files
+        state.model_list = [model for model in state.model_list if model.endswith(".keras")]
+
         # for each model in the model list, add it to the combo box
         for m in state.model_list:
             models_qcombo_box.addItem(m)

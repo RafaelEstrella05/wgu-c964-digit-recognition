@@ -31,6 +31,10 @@ def main():
 
         # Get a list of models in the 'models' directory
         state.model_list = os.listdir("models")
+
+        #filter out non .keras files
+        state.model_list = [model for model in state.model_list if model.endswith(".keras")]
+
         logging.info(f"Models found: {state.model_list}")
 
         # Launch the model selection window
