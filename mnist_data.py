@@ -64,6 +64,27 @@ def save_full_csv(x_train, x_test, y_train_int, y_test_int, csv_path='mnist_data
     print(f"Full dataset saved to {csv_path} ({(full_data.nbytes / 1e6):.1f}MB)")
 
 
+def save_subset_csv(x_train, y_train_int, csv_path='mnist_dataset/mnist_subset_cleaned.csv', num_samples=100):
+    """Save a subset of the dataset as a single CSV file"""
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+    # Select a subset of the data
+    x_subset = x_train[:num_samples]
+    y_subset = y_train_int[:num_samples]
+
+    # Flatten and concatenate data
+    x_subset_flat = x_subset.reshape(x_subset.shape[0], -1)
+    y_subset_flat = y_subset.reshape(-1, 1)
+
+    # Combine and save
+    subset_data = np.hstack([x_subset_flat, y_subset_flat])
+    np.savetxt(csv_path, subset_data, delimiter=',',
+               fmt='%.6f,' * 784 + '%d',
+               header=','.join([f'pixel{i}' for i in range(784)] + ['label']),
+               comments='')
+    print(f"Subset dataset saved to {csv_path} ({(subset_data.nbytes / 1e6):.1f}MB)")
+
+
 
 
 def save_full_images(x_data, y_data_int, sample_dir='mnist_dataset/images'):
@@ -99,7 +120,7 @@ def main():
     (x_train, _, y_train_int), (x_test, _, y_test_int) = load_and_preprocess_data()
 
     # Save full dataset CSV
-    save_full_csv(x_train, x_test, y_train_int, y_test_int)
+    #save_full_csv(x_train, x_test, y_train_int, y_test_int)
 
     # Get balanced samples from training set
     x_samples, y_samples_int, original_indices = get_balanced_samples(
@@ -107,10 +128,13 @@ def main():
     )
 
     # Save full dataset images
-    save_full_images(x_train, y_train_int)
+    #save_full_images(x_train, y_train_int)
+
+    # Save subset CSV
+    #save_subset_csv(x_samples, y_samples_int)
 
     # Create visualization
-    create_visualization(x_samples, y_samples_int)
+    #create_visualization(x_samples, y_samples_int)
 
 
 if __name__ == "__main__":
