@@ -52,7 +52,7 @@ Before installing the application, please ensure that you have the following:
 2. **Python 3.10** ([Download Here](https://www.python.org/downloads/))
 
 ### Installation
-1. Download the ZIP file from the provided submission.
+1. Download the ZIP file
 2. Extract the ZIP file to a folder on your computer.
 3. (Optional) run the following command to clone the repository:
    ```bash
