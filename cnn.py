@@ -142,8 +142,13 @@ def train_new_model_v3(model_name, password):
             tf.keras.layers.Dense(10, activation='softmax')
         ])
 
+        # Compile and train the model
         state.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+        # Train the model with dropout layers
         state.model.fit(state.x_train_data, state.y_train_data, epochs=8, batch_size=64, validation_split=0.1)
+
+        # Save and encrypt the trained model
         save_and_encrypt_model(model_name, password)
 
         logging.info("Version 3 completed: Dropout layers added to reduce overfitting.")
