@@ -96,6 +96,15 @@ def save_full_images(x_data, y_data_int, sample_dir='mnist_dataset/images'):
                    img.squeeze(), cmap='gray')
     print(f"Saved {len(x_data)} full dataset images to {sample_dir}")
 
+def save_full_test_images(x_data, y_data_int, sample_dir='mnist_dataset/test_images'):
+    """Save full dataset images with metadata"""
+    os.makedirs(sample_dir, exist_ok=True)
+
+    for i, (img, label) in enumerate(zip(x_data, y_data_int)):
+        plt.imsave(os.path.join(sample_dir, f'{i:05d}_digit_{label}.png'),
+                   img.squeeze(), cmap='gray')
+    print(f"Saved {len(x_data)} full dataset images to {sample_dir}")
+
 def create_visualization(x_samples, y_samples_int, save_path='mnist_dataset/samples_overview.png'):
     """Create scrollable visualization of samples"""
     plt.figure(figsize=(10, 40))
@@ -135,6 +144,9 @@ def main():
 
     # Create visualization
     #create_visualization(x_samples, y_samples_int)
+
+    # Save full dataset images
+    save_full_test_images(x_test, y_test_int)
 
 
 if __name__ == "__main__":
