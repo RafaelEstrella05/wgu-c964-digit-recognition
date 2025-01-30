@@ -161,27 +161,21 @@ class ModelTrainingForm(QDialog):
 
         self.layout.addWidget(self.buttons)
 
-
     def input_changed(self):
         """Enable the OK button if all inputs are valid."""
         model_name, password, confirm_password = self.get_inputs()
         invalid_chars = set(r'\/:*?"<>|')
-        if (model_name and password and confirm_password and
-                password == confirm_password and
-                model_name + ".keras" not in state.model_list and
-                not any(char in invalid_chars for char in model_name)):
-            self.buttons.button(QDialogButtonBox.Ok).setEnabled(True)
-            self.message_label.setText("")
+        self.buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+        if model_name + ".keras" in state.model_list:
+            self.message_label.setText("Model name already exists.")
+        elif any(char in invalid_chars for char in model_name):
+            self.message_label.setText("Model name contains invalid characters.")
+        elif len(password) < 8:
+            self.message_label.setText("Password is too short.")
+        elif password != confirm_password:
+            self.message_label.setText("Passwords do not match.")
         else:
-            self.buttons.button(QDialogButtonBox.Ok).setEnabled(False)
-            if password != confirm_password:
-                self.message_label.setText("Passwords do not match.")
-            elif model_name + ".keras" in state.model_list:
-                self.message_label.setText("Model name already exists.")
-            elif any(char in invalid_chars for char in model_name):
-                self.message_label.setText("Model name contains invalid characters.")
-            else:
-                self.message_label.setText("Please fill in all fields.")
+            self.message_label.setText("Please fill in all fields.")
 
     def get_inputs(self):
         return self.model_name_input.text(), self.password_input.text(), self.confirm_password_input.text()
